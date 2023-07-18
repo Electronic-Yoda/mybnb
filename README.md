@@ -27,5 +27,6 @@ docker stop mysql-bnb
 ```
 docker rm mysql-bnb
 ```
+```
 docker volume rm mysql-test
 ```
