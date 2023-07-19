@@ -1,6 +1,8 @@
 # mybnb-database
 
-Running mysql using docker:
+Running mysql using docker.
+
+Pull image:
 ```
 docker pull mysql:8.0
 ```
@@ -17,7 +19,7 @@ docker run --name mysql-bnb -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=change-me -e 
 
 Open mysql shell inside the container:
 ```
-docker exec -it mysql mysql -p
+docker exec -it mysql-bnb mysql -p
 ```
 
 Remove Container:
@@ -28,5 +30,5 @@ docker stop mysql-bnb
 docker rm mysql-bnb
 ```
 ```
-docker volume rm mysql-test
+docker volume rm mysql-bnb
 ```
