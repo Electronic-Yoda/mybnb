@@ -1,7 +1,7 @@
 import java.sql.*;
 import java.util.Random;
 
-public class Tester {
+public class JDBC {
 
     private static final String dbClassName = "com.mysql.cj.jdbc.Driver";
     private static final String CONNECTION = "jdbc:mysql://localhost:3306/testdb";
