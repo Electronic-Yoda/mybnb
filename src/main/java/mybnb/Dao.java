@@ -157,4 +157,24 @@ public class Dao {
             }
         }
     }
+
+    public void addEntry(String addEntrySql) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+                try (PreparedStatement stmt = conn.prepareStatement(addEntrySql)) {
+                        stmt.executeUpdate();
+                }
+        }
+    }
+
+    public void deleteEntry(String deleteEntrySql) throws SQLException {
+
+    }
+
+    public void executeQuery(String sqlQuery) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+                try (PreparedStatement stmt = conn.prepareStatement(sqlQuery)) {
+                        stmt.executeUpdate();
+                }
+        }
+    }
 }
