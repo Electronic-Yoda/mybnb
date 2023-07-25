@@ -13,7 +13,7 @@ public class Main {
             service.resetDb();
         }
         // Start CLI (command line interface)
-        Cli cli = new Cli(service);
-        cli.run();
+        ServiceCli serviceCli = new ServiceCli(service);
+        serviceCli.run();
     }
 }

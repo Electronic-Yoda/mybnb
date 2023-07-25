@@ -8,8 +8,6 @@ import java.util.List;
 
 import domain.User;
 import domain.Listing;
-import domain.Availability;
-import domain.Renting;
 
 public class Service {
     private final Dao dao = new Dao();
