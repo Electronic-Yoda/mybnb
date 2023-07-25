@@ -13,9 +13,12 @@ public class Dao {
 
         // Note: The order of the tables in the ArrayList is important for the dropTables() method.
         // The tables must be dropped in the reverse order of their dependencies.
+        // If one table has a foreign key reference to another, first drop the table that has the foreign key reference,
+        // and then drop the table that is being referenced.
+        tables.add("availability"); // old name for availabilities table
+        tables.add("availabilities");
         tables.add("reviews");
         tables.add("rentings");
-        tables.add("availabilities");
         tables.add("listings");
         tables.add("users");
     }
@@ -41,6 +44,7 @@ public class Dao {
             createTableSql = "CREATE TABLE listings (" +
                     "listing_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
                     "listing_type char(10)  NOT NULL," +
+                    "price_per_night decimal(10,2)  NOT NULL," +
                     "longitude decimal(9,6)  NOT NULL," +
                     "postal_code char(12)  NOT NULL," +
                     "latitude decimal(9,6)  NOT NULL," +
