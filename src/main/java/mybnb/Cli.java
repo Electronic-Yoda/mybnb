@@ -2,7 +2,6 @@ package mybnb;
 
 public class Cli {
     // Command Line Interface. Handles user input and output
-    // Calls the CLIController to handle user input
     Service service;
 
     public Cli(Service service) {
