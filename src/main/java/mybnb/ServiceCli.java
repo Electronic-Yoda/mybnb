@@ -1,12 +1,18 @@
 package mybnb;
 
+import data.Dao;
+import mylogger.ConsoleLogger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class ServiceCli {
     // Command Line Interface. Handles user input and output
-    Service service;
+    private static final Logger logger = LogManager.getLogger(ServiceCli.class);
+    private final Dao dao = new Dao();
+    private final UserService userService = new UserService(dao);
+    private final ListingService listingService = new ListingService(dao);
+    private final BookingService bookingService = new BookingService(dao);
 
-    public ServiceCli(Service service) {
-        this.service = service;
-    }
     public void run() {
         // Start CLI
         while(true) {
@@ -14,5 +20,10 @@ public class ServiceCli {
             // Call Services methods
             // Print result
         }
+    }
+    public static void main(String[] args) throws ClassNotFoundException {
+        ConsoleLogger.setup();
+        ServiceCli serviceCli = new ServiceCli();
+        serviceCli.run();
     }
 }
