@@ -15,7 +15,7 @@ public class Dao {
         // The tables must be dropped in the reverse order of their dependencies.
         tables.add("reviews");
         tables.add("rentings");
-        tables.add("availability");
+        tables.add("availabilities");
         tables.add("listings");
         tables.add("users");
     }
@@ -25,7 +25,7 @@ public class Dao {
             PreparedStatement stmt;
 
             // availability table
-            createTableSql = "CREATE TABLE availability (" +
+            createTableSql = "CREATE TABLE availabilities (" +
                     "availability_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
                     "start_date date  NOT NULL," +
                     "end_date date  NOT NULL," +
@@ -102,7 +102,7 @@ public class Dao {
             // add foreign key constraints
             String addForeignKeySql;
 
-            addForeignKeySql = "ALTER TABLE availability " +
+            addForeignKeySql = "ALTER TABLE availabilities " +
                     "ADD CONSTRAINT availability_listings " +
                     "FOREIGN KEY (listings_listing_id) " +
                     "REFERENCES listings (listing_id);";
