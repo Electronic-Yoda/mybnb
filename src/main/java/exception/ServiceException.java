@@ -1,4 +1,4 @@
-package exceptions;
+package exception;
 
 public class ServiceException extends RuntimeException{
     public ServiceException(String message, Throwable cause) {

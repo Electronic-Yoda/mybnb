@@ -1,4 +1,4 @@
-package exceptions;
+package exception;
 
 /*
 Note: this is an unchecked exception. It extends RuntimeException, not Exception.

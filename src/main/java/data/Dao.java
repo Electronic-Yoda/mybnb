@@ -3,7 +3,8 @@ package data;
 import domain.Amenity;
 import domain.Listing;
 import domain.User;
-import exceptions.DataAccessException;
+import exception.DataAccessException;
+import filter.UserFilter;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -60,8 +61,8 @@ public class Dao {
                     "listing_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
                     "listing_type char(10)  NOT NULL," +
                     "price_per_night decimal(10,2)  NOT NULL," +
-                    "longitude decimal(9,6)  NOT NULL," +
                     "postal_code char(12)  NOT NULL," +
+                    "longitude decimal(9,6)  NOT NULL," +
                     "latitude decimal(9,6)  NOT NULL," +
                     "city varchar(20)  NOT NULL," +
                     "country varchar(20)  NOT NULL," +
@@ -230,66 +231,58 @@ public class Dao {
     }
 
     public List<String> getTables() {
-        List<String> tables = new ArrayList<>();
         try (Connection connection = DriverManager.getConnection(url, username, password)) {
             DatabaseMetaData metaData = connection.getMetaData();
             String schema = connection.getSchema();
             ResultSet rs = metaData.getTables(null, schema, "%", new String[]{"TABLE"});
+            List<String> tables = new ArrayList<>();
             while (rs.next()) {
                 String tableName = rs.getString("TABLE_NAME");
                 if (!tableName.equals("sys_config")) {
                     tables.add(tableName);
                 }
             }
+            return tables;
         } catch (SQLException e) {
             throw new DataAccessException("Error retrieving table list", e);
         }
-        return tables;
     }
 
+    private void executeStatement(SqlQuery query) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            stmt.executeUpdate();
+        }
+    }
 
     public void insertUser(User user) {
-        String sql = "INSERT INTO users (sin, name, address, birthdate, occupation) VALUES (?, ?, ?, ?, ?)";
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, user.sin());
-            stmt.setString(2, user.name());
-            stmt.setString(3, user.address());
-            stmt.setDate(4, Date.valueOf(user.birthdate()));
-            stmt.setString(5, user.occupation());
-            stmt.executeUpdate();
+        SqlQuery query = new SqlQuery("INSERT INTO users (sin, name, address, birthdate, occupation) VALUES (?, ?, ?, ?, ?)",
+                user.sin(), user.name(), user.address(), Date.valueOf(user.birthdate()), user.occupation());
+        try {
+            executeStatement(query);
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting user", e);
         }
     }
 
     public void deleteUser(Long sin) {
-        String sql = "DELETE FROM users WHERE sin=?";
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, sin);
-            stmt.executeUpdate();
+        SqlQuery query = new SqlQuery("DELETE FROM users WHERE sin=?", sin);
+        try {
+            executeStatement(query);
         } catch (SQLException e) {
             throw new DataAccessException("Error deleting user", e);
         }
     }
 
-    public boolean userExists(Long sin) {
-        String sql = "SELECT * FROM users WHERE sin=?";
+    private List<User> executeUserQuery(SqlQuery query) throws SQLException{
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, sin);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
-        } catch (SQLException e) {
-            throw new DataAccessException("Error checking user exists", e);
-        }
-    }
-
-    public List<User> getUsers() {
-        String sql = "SELECT * FROM users";
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
             ResultSet rs = stmt.executeQuery();
             List<User> users = new ArrayList<>();
             while (rs.next()) {
@@ -297,65 +290,109 @@ public class Dao {
                         rs.getDate("birthdate").toLocalDate(), rs.getString("occupation")));
             }
             return users;
-        } catch (SQLException e) {
-            throw new DataAccessException("Error getting users", e);
         }
     }
 
-    public long insertListing(Listing listing) {
-        // Note: we disregard the `listing_id` column as it is an auto-increment column whose value is automatically generated.
-        String sql = "INSERT INTO listings (listing_type, price_per_night, longitude, postal_code," +
-                "latitude, city, country, amenities, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    public boolean userExists(Long sin) {
+        SqlQuery query = new SqlQuery("SELECT * FROM users WHERE sin=?", sin);
+        try {
+            return !executeUserQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking user exists", e);
+        }
+    }
+
+    public List<User> getUsers() {
+        SqlQuery query = new SqlQuery("SELECT * FROM users");
+        try {
+            return executeUserQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all users", e);
+        }
+    }
+
+    public List<User> getUsersByFilter(UserFilter filter) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM users WHERE 1 = 1");
+        List<Object> parameters = new ArrayList<>();
+        if (filter.sin() != null) {
+            sql.append(" AND sin = ?");
+            parameters.add(filter.sin());
+        }
+        if (filter.name() != null) {
+            sql.append(" AND name = ?");
+            parameters.add(filter.name());
+        }
+        if (filter.address() != null) {
+            sql.append(" AND address = ?");
+            parameters.add(filter.address());
+        }
+        if (filter.birthdate() != null) {
+            sql.append(" AND birthdate = ?");
+            parameters.add(filter.birthdate());
+        }
+        if (filter.occupation() != null) {
+            sql.append(" AND occupation = ?");
+            parameters.add(filter.occupation());
+        }
+        SqlQuery query = new SqlQuery(sql.toString(), parameters.toArray());
+        try {
+            return executeUserQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting users by filter", e);
+        }
+    }
+
+    public User getUser(Long sin) {
+        SqlQuery query = new SqlQuery("SELECT * FROM users WHERE sin=?", sin);
+        try {
+            return executeUserQuery(query).get(0);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting user", e);
+        }
+    }
+
+    public List<Listing> executeListingQuery(SqlQuery query) throws SQLException {
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
-            // Here, set the parameters for the PreparedStatement.
-            // Note that the index starts from 1.
-            stmt.setString(1, listing.listing_type());
-            stmt.setBigDecimal(2, listing.price_per_night());
-            stmt.setBigDecimal(3, listing.longitude());
-            stmt.setString(4, listing.postal_code());
-            stmt.setBigDecimal(5, listing.latitude());
-            stmt.setString(6, listing.city());
-            stmt.setString(7, listing.country());
-            stmt.setString(8, listing.amenities());
-            stmt.setLong(9, listing.users_sin());
-
-            int affectedRows = stmt.executeUpdate();
-
-            if (affectedRows == 0) {
-                throw new DataAccessException("Creating listing failed, no rows affected.");
+             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
             }
-
-            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    return generatedKeys.getLong(1);
-                } else {
-                    throw new DataAccessException("Creating listing failed, no ID obtained.");
-                }
+            ResultSet rs = stmt.executeQuery();
+            List<Listing> listings = new ArrayList<>();
+            while (rs.next()) {
+                listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"), rs.getBigDecimal("price_per_night"),
+                        rs.getString("postal_code"), rs.getBigDecimal("longitude"), rs.getBigDecimal("latitude"),
+                        rs.getString("city"), rs.getString("country"), rs.getString("amenities"), rs.getLong("users_sin")));
             }
+            return listings;
+        }
+    }
+
+    public void insertListing(Listing listing) {
+        // Note: we disregard the `listing_id` column as it is an auto-increment column whose value is automatically generated.
+        SqlQuery query = new SqlQuery("INSERT INTO listings (listing_type, price_per_night, postal_code, longitude," +
+                "latitude, city, country, amenities, users_sin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                listing.listing_type(), listing.price_per_night(), listing.postal_code(), listing.longitude(),
+                listing.latitude(), listing.city(), listing.country(), listing.amenities(), listing.users_sin());
+        try {
+            executeStatement(query);
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting listing", e);
         }
     }
 
     public boolean listingExists(Listing listing) {
-        String sql = "SELECT * FROM listings WHERE postal_code = ? AND city = ? AND country = ?";
-
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, listing.postal_code());
-            stmt.setString(2, listing.city());
-            stmt.setString(3, listing.country());
-
-            ResultSet rs = stmt.executeQuery();
-
-            return rs.next();
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
+                listing.postal_code(), listing.city(), listing.country());
+        try {
+            return !executeListingQuery(query).isEmpty();
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if listing exists", e);
         }
     }
+
+
+
 
     public List<Amenity> getAmenities() {
         String sql = "SELECT * FROM amenities";

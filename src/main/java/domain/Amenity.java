@@ -1,3 +1,3 @@
 package domain;
 
-public record Amenity(long amenity_id, String amenity_name) {}
+public record Amenity(Long amenity_id, String amenity_name) {}
