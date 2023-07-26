@@ -34,7 +34,9 @@ public class ListingService {
     }
 
     public void deleteListing(long listingId) {
-        // TODO: Implement method
+        if (!dao.listingIdExists(listingId)) {
+            dao.deleteListing(listingId);
+        }
     }
 
     public void updateListingPrice(long listingId, BigDecimal newPrice) {

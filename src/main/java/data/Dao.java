@@ -391,6 +391,24 @@ public class Dao {
         }
     }
 
+    public boolean listingIdExists(long listingId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listingId);
+        try {
+            return !executeListingQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if listing_id exists", e);
+        }
+    }
+
+    public void deleteListing(long listingId) {
+        SqlQuery query = new SqlQuery("DELETE FROM listings WHERE listing_id = ?", listingId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if listing exists", e);
+        }
+    }
+
 
 
 
