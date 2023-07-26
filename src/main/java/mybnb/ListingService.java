@@ -1,6 +1,7 @@
 package mybnb;
 
 import data.Dao;
+import domain.Amenity;
 import domain.Listing;
 import exceptions.ServiceException;
 import org.apache.logging.log4j.LogManager;

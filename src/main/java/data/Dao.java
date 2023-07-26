@@ -1,11 +1,14 @@
 package data;
 
+import domain.Amenity;
 import domain.Listing;
 import domain.User;
 import exceptions.DataAccessException;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class Dao {
     private final String url = "jdbc:mysql://localhost/mydb";
@@ -20,6 +23,8 @@ public class Dao {
         // The tables must be dropped in the reverse order of their dependencies.
         // If one table has a foreign key reference to another, first drop the table that has the foreign key reference,
         // and then drop the table that is being referenced.
+        tables.add("listing_amenities");
+        tables.add("amenities");
         tables.add("availability"); // old name for availabilities table
         tables.add("availabilities");
         tables.add("reviews");
@@ -109,6 +114,26 @@ public class Dao {
             stmt.executeUpdate();
             stmt.close();
 
+            // amenities table
+            createTableSql = "CREATE TABLE amenities (" +
+                    "amenity_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
+                    "amenity_name varchar(50)  NOT NULL UNIQUE," +
+                    "PRIMARY KEY (amenity_id)" +
+                    ");";
+            stmt = conn.prepareStatement(createTableSql);
+            stmt.executeUpdate();
+            stmt.close();
+
+            // listing_amenities table
+            createTableSql = "CREATE TABLE listing_amenities (" +
+                    "listing_id BIGINT UNSIGNED NOT NULL," +
+                    "amenity_id BIGINT UNSIGNED NOT NULL," +
+                    "PRIMARY KEY (listing_id, amenity_id)" +
+                    ");";
+            stmt = conn.prepareStatement(createTableSql);
+            stmt.executeUpdate();
+            stmt.close();
+
             // add foreign key constraints
             String addForeignKeySql;
 
@@ -151,6 +176,33 @@ public class Dao {
             stmt = conn.prepareStatement(addForeignKeySql);
             stmt.executeUpdate();
             stmt.close();
+
+            addForeignKeySql = "ALTER TABLE listing_amenities " +
+                    "ADD CONSTRAINT listing_amenities_listings " +
+                    "FOREIGN KEY (listing_id) " +
+                    "REFERENCES listings (listing_id);";
+            stmt = conn.prepareStatement(addForeignKeySql);
+            stmt.executeUpdate();
+            stmt.close();
+
+            addForeignKeySql = "ALTER TABLE listing_amenities " +
+                    "ADD CONSTRAINT listing_amenities_amenities " +
+                    "FOREIGN KEY (amenity_id) " +
+                    "REFERENCES amenities (amenity_id);";
+            stmt = conn.prepareStatement(addForeignKeySql);
+            stmt.executeUpdate();
+            stmt.close();
+
+            // insert amenities
+            List<String> amenities = Arrays.asList("wifi", "tv", "kitchen", "parking", "elevator", "gym", "hot tub", "pool", "washer", "dryer");
+            String insertAmenitySql = "INSERT INTO amenities (amenity_name) VALUES (?);";
+            stmt = conn.prepareStatement(insertAmenitySql);
+            for (String amenity : amenities) {
+                stmt.setString(1, amenity);
+                stmt.executeUpdate();
+            }
+            stmt.close();
+
         } catch (SQLException e) {
             throw new DataAccessException("Error creating tables", e);
         }
@@ -167,6 +219,7 @@ public class Dao {
             throw new DataAccessException("Error deleting tables", e);
         }
     }
+
 
     public void insertUser(User user) {
         String sql = "INSERT INTO users (sin, name, address, birthdate, occupation) VALUES (?, ?, ?, ?, ?)";
@@ -258,6 +311,21 @@ public class Dao {
             return rs.next();
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if listing exists", e);
+        }
+    }
+
+    public List<Amenity> getAmenities() {
+        String sql = "SELECT * FROM amenities";
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            List<Amenity> amenities = new ArrayList<>();
+            while (rs.next()) {
+                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name")));
+            }
+            return amenities;
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting amenities", e);
         }
     }
 
