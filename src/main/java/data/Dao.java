@@ -184,7 +184,8 @@ public class Dao {
             addForeignKeySql = "ALTER TABLE listing_amenities " +
                     "ADD CONSTRAINT listing_amenities_listings " +
                     "FOREIGN KEY (listing_id) " +
-                    "REFERENCES listings (listing_id);";
+                    "REFERENCES listings (listing_id)" +
+                    "   ON DELETE CASCADE;";
             stmt = conn.prepareStatement(addForeignKeySql);
             stmt.executeUpdate();
             stmt.close();
@@ -413,8 +414,27 @@ public class Dao {
         }
     }
 
+    public Date getCurrentDate() {
+        SqlQuery query = new SqlQuery("SELECT CURRENT_DATE()");
+
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+            PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+
+            ResultSet rs = stmt.executeQuery();
+            return rs.getDate(0);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting date", e);
+        }
+    }
+
+    public boolean hasFutureBookings(long listingId) {
+        // TODO
+        // Get bookings related to listingId
+        // Compare booking end date to today, if end date is in the future, return True
+    }
+
     public void updateListingPrice(long listingId, BigDecimal newPrice) {
-        SqlQuery query = new SqlQuery("UPDATE listings SET price_per_night = ? WHERE listing_id = ?", listingId);
+        SqlQuery query = new SqlQuery("UPDATE listings SET price_per_night = ? WHERE listing_id = ?", newPrice, listingId);
         try {
             executeStatement(query);
         } catch (SQLException e) {

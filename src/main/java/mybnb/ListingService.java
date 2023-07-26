@@ -33,6 +33,8 @@ public class ListingService {
 
     public void deleteListing(long listingId) {
         if (!dao.listingIdExists(listingId)) {
+            // TODO Check if future bookings exist
+
             dao.deleteListing(listingId);
         } else {
             throw new ServiceException(
@@ -44,6 +46,7 @@ public class ListingService {
 
     public void updateListingPrice(long listingId, BigDecimal newPrice) {
         // compareTo returns -1 if newPrice < 0
+        // TODO double check requirements
         if (newPrice.compareTo(BigDecimal.ZERO) < 0) {
             throw new ServiceException(
                     String.format("Unable to update listing price, %d. Price must be a non-negative number.",
