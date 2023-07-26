@@ -11,28 +11,32 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Dao {
-    private final String url = "jdbc:mysql://localhost/mydb";
-    private final String username = "root";
-    private final String password = "";
-    private ArrayList<String> tables;
+    private final String url;
+    private final String username;
+    private final String password;
+    private List<String> tables = Arrays.asList(
+        "listing_amenities",
+        "amenities",
+        "availabilities",
+        "reviews",
+        "bookings",
+        "listings",
+        "users"
+    );
 
-    public Dao() {
-        tables = new ArrayList<>();
-
-        // Note: The order of the tables in the ArrayList is important for the dropTables() method.
-        // The tables must be dropped in the reverse order of their dependencies.
-        // If one table has a foreign key reference to another, first drop the table that has the foreign key reference,
-        // and then drop the table that is being referenced.
-        tables.add("listing_amenities");
-        tables.add("amenities");
-        tables.add("availability"); // old name for availabilities table
-        tables.add("availabilities");
-        tables.add("reviews");
-        tables.add("rentings"); // old name for bookings table
-        tables.add("bookings");
-        tables.add("listings");
-        tables.add("users");
+    public Dao(String url, String username, String password) {
+        this.url = url;
+        this.username = username;
+        this.password = password;
     }
+
+    // For testing purposes
+    public Dao() {
+        this.url = "jdbc:mysql://localhost:3307/mydb";
+        this.username = "root";
+        this.password = "";
+    }
+
     public void createTables() {
         try (Connection conn = DriverManager.getConnection(url, username, password)) {
             String createTableSql;
@@ -211,6 +215,7 @@ public class Dao {
     public void dropTables() {
         try (Connection conn = DriverManager.getConnection(url, username, password)) {
             for (String table : tables) {
+
                 try (PreparedStatement stmt = conn.prepareStatement("DROP TABLE IF EXISTS " + table)) {
                     stmt.executeUpdate();
                 }
@@ -218,6 +223,28 @@ public class Dao {
         } catch (SQLException e) {
             throw new DataAccessException("Error deleting tables", e);
         }
+    }
+
+    public List<String> getOriginalTables() {
+        return new ArrayList<>(tables);
+    }
+
+    public List<String> getTables() {
+        List<String> tables = new ArrayList<>();
+        try (Connection connection = DriverManager.getConnection(url, username, password)) {
+            DatabaseMetaData metaData = connection.getMetaData();
+            String schema = connection.getSchema();
+            ResultSet rs = metaData.getTables(null, schema, "%", new String[]{"TABLE"});
+            while (rs.next()) {
+                String tableName = rs.getString("TABLE_NAME");
+                if (!tableName.equals("sys_config")) {
+                    tables.add(tableName);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error retrieving table list", e);
+        }
+        return tables;
     }
 
 
@@ -256,6 +283,22 @@ public class Dao {
             return rs.next();
         } catch (SQLException e) {
             throw new DataAccessException("Error checking user exists", e);
+        }
+    }
+
+    public List<User> getUsers() {
+        String sql = "SELECT * FROM users";
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            List<User> users = new ArrayList<>();
+            while (rs.next()) {
+                users.add(new User(rs.getLong("sin"), rs.getString("name"), rs.getString("address"),
+                        rs.getDate("birthdate").toLocalDate(), rs.getString("occupation")));
+            }
+            return users;
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting users", e);
         }
     }
 

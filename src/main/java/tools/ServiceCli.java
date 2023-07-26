@@ -1,12 +1,15 @@
-package mybnb;
+package tools;
 
 import data.Dao;
+import mybnb.BookingService;
+import mybnb.ListingService;
+import mybnb.UserService;
 import mylogger.ConsoleLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class ServiceCli {
-    // Command Line Interface. Handles user input and output
+    // Command Line Interface to interact with services. Handles user input and output relevant information to user
     private static final Logger logger = LogManager.getLogger(ServiceCli.class);
     private final Dao dao = new Dao(
             "jdbc:mysql://localhost:3307/mydb",
