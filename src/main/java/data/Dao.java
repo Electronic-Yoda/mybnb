@@ -6,6 +6,7 @@ import domain.User;
 import exception.DataAccessException;
 import filter.UserFilter;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,14 +17,13 @@ public class Dao {
     private final String username;
     private final String password;
     private List<String> tables = Arrays.asList(
-        "listing_amenities",
-        "amenities",
-        "availabilities",
-        "reviews",
-        "bookings",
-        "listings",
-        "users"
-    );
+            "listing_amenities",
+            "amenities",
+            "availabilities",
+            "reviews",
+            "bookings",
+            "listings",
+            "users");
 
     public Dao(String url, String username, String password) {
         this.url = url;
@@ -54,7 +54,6 @@ public class Dao {
             stmt = conn.prepareStatement(createTableSql);
             stmt.executeUpdate();
             stmt.close();
-
 
             // listings table
             createTableSql = "CREATE TABLE listings (" +
@@ -199,7 +198,8 @@ public class Dao {
             stmt.close();
 
             // insert amenities
-            List<String> amenities = Arrays.asList("wifi", "tv", "kitchen", "parking", "elevator", "gym", "hot tub", "pool", "washer", "dryer");
+            List<String> amenities = Arrays.asList("wifi", "tv", "kitchen", "parking", "elevator", "gym", "hot tub",
+                    "pool", "washer", "dryer");
             String insertAmenitySql = "INSERT INTO amenities (amenity_name) VALUES (?);";
             stmt = conn.prepareStatement(insertAmenitySql);
             for (String amenity : amenities) {
@@ -234,7 +234,7 @@ public class Dao {
         try (Connection connection = DriverManager.getConnection(url, username, password)) {
             DatabaseMetaData metaData = connection.getMetaData();
             String schema = connection.getSchema();
-            ResultSet rs = metaData.getTables(null, schema, "%", new String[]{"TABLE"});
+            ResultSet rs = metaData.getTables(null, schema, "%", new String[] { "TABLE" });
             List<String> tables = new ArrayList<>();
             while (rs.next()) {
                 String tableName = rs.getString("TABLE_NAME");
@@ -250,7 +250,7 @@ public class Dao {
 
     private void executeStatement(SqlQuery query) throws SQLException {
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
@@ -259,7 +259,8 @@ public class Dao {
     }
 
     public void insertUser(User user) {
-        SqlQuery query = new SqlQuery("INSERT INTO users (sin, name, address, birthdate, occupation) VALUES (?, ?, ?, ?, ?)",
+        SqlQuery query = new SqlQuery(
+                "INSERT INTO users (sin, name, address, birthdate, occupation) VALUES (?, ?, ?, ?, ?)",
                 user.sin(), user.name(), user.address(), Date.valueOf(user.birthdate()), user.occupation());
         try {
             executeStatement(query);
@@ -277,9 +278,9 @@ public class Dao {
         }
     }
 
-    private List<User> executeUserQuery(SqlQuery query) throws SQLException{
+    private List<User> executeUserQuery(SqlQuery query) throws SQLException {
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
@@ -353,23 +354,26 @@ public class Dao {
 
     public List<Listing> executeListingQuery(SqlQuery query) throws SQLException {
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
             ResultSet rs = stmt.executeQuery();
             List<Listing> listings = new ArrayList<>();
             while (rs.next()) {
-                listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"), rs.getBigDecimal("price_per_night"),
+                listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"),
+                        rs.getBigDecimal("price_per_night"),
                         rs.getString("postal_code"), rs.getBigDecimal("longitude"), rs.getBigDecimal("latitude"),
-                        rs.getString("city"), rs.getString("country"), rs.getString("amenities"), rs.getLong("users_sin")));
+                        rs.getString("city"), rs.getString("country"), rs.getString("amenities"),
+                        rs.getLong("users_sin")));
             }
             return listings;
         }
     }
 
     public void insertListing(Listing listing) {
-        // Note: we disregard the `listing_id` column as it is an auto-increment column whose value is automatically generated.
+        // Note: we disregard the `listing_id` column as it is an auto-increment column
+        // whose value is automatically generated.
         SqlQuery query = new SqlQuery("INSERT INTO listings (listing_type, price_per_night, postal_code, longitude," +
                 "latitude, city, country, amenities, users_sin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 listing.listing_type(), listing.price_per_night(), listing.postal_code(), listing.longitude(),
@@ -405,17 +409,23 @@ public class Dao {
         try {
             executeStatement(query);
         } catch (SQLException e) {
-            throw new DataAccessException("Error checking if listing exists", e);
+            throw new DataAccessException("Error deleting listing", e);
         }
     }
 
-
-
+    public void updateListingPrice(long listingId, BigDecimal newPrice) {
+        SqlQuery query = new SqlQuery("UPDATE listings SET price_per_night = ? WHERE listing_id = ?", listingId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating existing listing price", e);
+        }
+    }
 
     public List<Amenity> getAmenities() {
         String sql = "SELECT * FROM amenities";
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
             ResultSet rs = stmt.executeQuery();
             List<Amenity> amenities = new ArrayList<>();
             while (rs.next()) {

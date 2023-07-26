@@ -25,37 +25,53 @@ public class ListingService {
             logger.info("Listing added successfully");
         } else {
             throw new ServiceException(
-                String.format(
-                    "Unable to add listing because listing at %s, %s. %s already exists",
-                        listing.country(), listing.city(), listing.postal_code()
-                )
-            );
+                    String.format(
+                            "Unable to add listing because listing at %s, %s. %s already exists",
+                            listing.country(), listing.city(), listing.postal_code()));
         }
     }
 
     public void deleteListing(long listingId) {
         if (!dao.listingIdExists(listingId)) {
             dao.deleteListing(listingId);
+        } else {
+            throw new ServiceException(
+                    String.format(
+                            "Unable to add listing because listing with id, %d, doesnt exists",
+                            listingId));
         }
     }
 
     public void updateListingPrice(long listingId, BigDecimal newPrice) {
-        // TODO: Implement method
+        // compareTo returns -1 if newPrice < 0
+        if (newPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new ServiceException(
+                    String.format("Unable to update listing price, %d. Price must be a non-negative number.",
+                            newPrice));
+        }
+
+        if (!dao.listingIdExists(listingId)) {
+            dao.updateListingPrice(listingId, newPrice);
+        } else {
+            throw new ServiceException(
+                    String.format(
+                            "Unable to add listing because listing with id, %d, doesnt exists",
+                            listingId));
+        }
     }
 
     public void changeListingAvailability(long listingId, LocalDate startDate, LocalDate endDate, boolean isAvailable) {
         // TODO: Implement method
     }
 
-
-
     // ============= Search methods =============
     public List<Listing> searchListingsByLocation(double latitude, double longitude, double distance) {
         // TODO: Implement method
         return null;
     }
+
     public List<Listing> searchListingsByLocationAndPrice(double latitude, double longitude, double distance,
-                                                          boolean priceAscending) {
+            boolean priceAscending) {
         // TODO: Implement method
         return null;
     }
