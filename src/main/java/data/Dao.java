@@ -2,11 +2,16 @@ package data;
 
 import domain.*;
 import domain.Amenity;
+import domain.Booking;
+import domain.Listing;
+import domain.User;
+
 import exception.DataAccessException;
 import filter.UserFilter;
 
 import java.math.BigDecimal;
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -217,6 +222,50 @@ public class Dao {
     }
 
     public boolean hasFutureBookings(long listingId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ?", listingId);
+
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+            PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            List<Booking> bookings = executeBookingQuery(query);
+
+            // There are no bookings for this listing
+            if (bookings.isEmpty()) 
+                return false;
+
+            LocalDate current_Date = getCurrentDate().toLocalDate();
+
+            for (int i = 0; i < bookings.size(); i++) {
+                Booking booking = bookings.get(i);
+
+                if (booking.end_date().isAfter(current_Date))
+                    return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting bookings with listing id, " + listingId, e);
+        }
+    }
+
+    public List<Booking> executeBookingQuery(SqlQuery query) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Booking> bookings = new ArrayList<>();
+            while (rs.next()) {
+                bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(),
+                        rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
+                        rs.getBigDecimal("amount"), rs.getString("currency"),
+                        rs.getString("payment_method"), rs.getLong("users_sin"),
+                        rs.getLong("listings_listing_id")));
+            }
+            return bookings;
+        }
+    }
+
+    public boolean bookingExists(Booking booking) {
         // TODO
         // Get bookings related to listingId
         // Compare booking end date to today, if end date is in the future, return True
@@ -224,7 +273,8 @@ public class Dao {
     }
 
     public void updateListingPrice(long listingId, BigDecimal newPrice) {
-        SqlQuery query = new SqlQuery("UPDATE listings SET price_per_night = ? WHERE listing_id = ?", newPrice, listingId);
+        SqlQuery query = new SqlQuery("UPDATE listings SET price_per_night = ? WHERE listing_id = ?", newPrice,
+                listingId);
         try {
             executeStatement(query);
         } catch (SQLException e) {
