@@ -36,7 +36,7 @@ public class ListingService {
         if (!dao.listingIdExists(listingId)) {
             if (dao.hasFutureBookings(listingId)) {
                 throw new ServiceException(
-                        String.format("Unable to delete listing because there are existing bookings."));
+                        String.format("Unable to delete listing because there are future bookings."));
             }
             dao.deleteListing(listingId);
         } else {
