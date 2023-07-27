@@ -1,6 +1,6 @@
 package filter;
 
-import java.time.LocalDate;
+import domain.User;
 
-public record UserFilter(Long sin, String name, String address, LocalDate birthdate, String occupation) {}
+public record UserFilter(User user) {}
 

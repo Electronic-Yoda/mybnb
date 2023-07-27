@@ -1,8 +1,10 @@
 package data;
 
+import domain.Listing;
 import domain.User;
 import filter.UserFilter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -11,28 +13,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DaoTest {
 
-    @org.junit.jupiter.api.Test
-    void tableTest() {
-        Dao dao = new Dao();
-        dao.dropTables();
-        List<String> tables = dao.getOriginalTables();
-        dao.createTables();
-        List<String> tablesRetrieved = dao.getTables();
-        Collections.sort(tables);
-        System.out.println(tables);
-        System.out.println(tablesRetrieved);
-        Collections.sort(tablesRetrieved);
-        assertTrue(tables.equals(tablesRetrieved));
-        dao.dropTables();
-        tablesRetrieved = dao.getTables();
-        assertTrue(tablesRetrieved.isEmpty());
-    }
 
     @org.junit.jupiter.api.Test
     void userTest() {
         Dao dao = new Dao();
-        dao.dropTables();
-        dao.createTables();
+        DbConfig dbConfig = new DbConfig();
+        dbConfig.resetTables();
         assertTrue(dao.getUsers().isEmpty());
 
         User user = new User(
@@ -49,14 +35,14 @@ class DaoTest {
         assertTrue(user.equals(userRetrieved));
         dao.deleteUser(123456789L);
         assertTrue(dao.getUsers().isEmpty());
-        dao.dropTables();
     }
 
     @org.junit.jupiter.api.Test
     void userFilterTest() {
         Dao dao = new Dao();
-        dao.dropTables();
-        dao.createTables();
+        DbConfig dbConfig = new DbConfig();
+        dbConfig.resetTables();
+
         assertTrue(dao.getUsers().isEmpty());
 
         User user1 = new User(
@@ -70,7 +56,7 @@ class DaoTest {
         User user2 = new User(
                 2L,
                 "John Doe",
-                "12 College St. Toronto, ON",
+                null, // can be null (for user privacy)
                 LocalDate.parse("1976-01-09"),
                 "Doctor"
         );
@@ -79,11 +65,13 @@ class DaoTest {
         assertTrue(dao.getUsers().size() == 2);
         List<User> usersRetrieved = dao.getUsersByFilter(
                 new UserFilter(
-                        1L,
-                        null,
-                        null,
-                        null,
-                        null
+                    new User(
+                            1L,
+                            null,
+                            null,
+                            null,
+                            null
+                    )
                 )
         );
         assertTrue(usersRetrieved.size() == 1);
@@ -91,11 +79,13 @@ class DaoTest {
 
         usersRetrieved = dao.getUsersByFilter(
                 new UserFilter(
-                        null,
-                        "John Doe",
-                        null,
-                        null,
-                        null
+                        new User(
+                                null,
+                                "John Doe",
+                                null,
+                                null,
+                                null
+                        )
                 )
         );
         assertTrue(usersRetrieved.size() == 2);
@@ -107,11 +97,39 @@ class DaoTest {
 
     @org.junit.jupiter.api.Test
     void listingBasicTest() {
-//        Dao dao = new Dao();
-//        dao.dropTables();
-//        dao.createTables();
-//        assertTrue(dao.getListings().isEmpty());
-//        dao.dropTables();
+        Dao dao = new Dao();
+        DbConfig dbConfig = new DbConfig();
+        dbConfig.resetTables();
+
+        User user = new User(
+                123456789L,
+                "John Doe",
+                "32 Main St. Toronto, ON",
+                LocalDate.parse("2001-03-12"),
+                "Student"
+        );
+        dao.insertUser(user);
+
+        Listing listing = new Listing(
+                null,
+                "house",
+                new BigDecimal(100),
+                "123 Main St.",
+                "M5S 1A1",
+                new BigDecimal(43.66),
+                new BigDecimal(79.40),
+                "Toronto",
+                "Canada",
+                123456789L
+        );
+        dao.insertListing(listing);
+        assertTrue(dao.listingExists(listing));
+        List<Listing> retrievedListings = dao.getListings();
+        assertTrue(retrievedListings.size() == 1);
+        System.out.println(retrievedListings.get(0));
+        dao.deleteListing(retrievedListings.get(0).listing_id());
+        assertFalse(dao.listingExists(retrievedListings.get(0)));
+
     }
 
     @org.junit.jupiter.api.Test
