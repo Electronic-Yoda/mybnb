@@ -1,8 +1,7 @@
 package data;
 
+import domain.*;
 import domain.Amenity;
-import domain.Listing;
-import domain.User;
 import exception.DataAccessException;
 import filter.UserFilter;
 
@@ -144,7 +143,8 @@ public class Dao {
             addForeignKeySql = "ALTER TABLE availabilities " +
                     "ADD CONSTRAINT availability_listings " +
                     "FOREIGN KEY (listings_listing_id) " +
-                    "REFERENCES listings (listing_id);";
+                    "REFERENCES listings (listing_id)" +
+                    "ON DELETE CASCADE;";
             stmt = conn.prepareStatement(addForeignKeySql);
             stmt.executeUpdate();
             stmt.close();
@@ -160,7 +160,8 @@ public class Dao {
             addForeignKeySql = "ALTER TABLE reviews " +
                     "ADD CONSTRAINT reviews_bookings " +
                     "FOREIGN KEY (bookings_booking_id) " +
-                    "REFERENCES bookings (booking_id);";
+                    "REFERENCES bookings (booking_id);"+
+                    "ON DELETE CASCADE;";
             stmt = conn.prepareStatement(addForeignKeySql);
             stmt.executeUpdate();
             stmt.close();
@@ -185,7 +186,7 @@ public class Dao {
                     "ADD CONSTRAINT listing_amenities_listings " +
                     "FOREIGN KEY (listing_id) " +
                     "REFERENCES listings (listing_id)" +
-                    "   ON DELETE CASCADE;";
+                    "ON DELETE CASCADE;";
             stmt = conn.prepareStatement(addForeignKeySql);
             stmt.executeUpdate();
             stmt.close();
@@ -431,6 +432,7 @@ public class Dao {
         // TODO
         // Get bookings related to listingId
         // Compare booking end date to today, if end date is in the future, return True
+        return false;
     }
 
     public void updateListingPrice(long listingId, BigDecimal newPrice) {
@@ -441,6 +443,136 @@ public class Dao {
             throw new DataAccessException("Error updating existing listing price", e);
         }
     }
+
+    public void insertAvailability(Availability availability) {
+        SqlQuery query = new SqlQuery("INSERT INTO availabilities (start_date, end_date, listings_listing_id) VALUES (?, ?, ?)",
+                availability.start_date(), availability.end_date(), availability.listings_listing_id());
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting availability", e);
+        }
+    }
+
+    public void deleteAvailability(long availabilityId) {
+        SqlQuery query = new SqlQuery("DELETE FROM availabilities WHERE availability_id = ?", availabilityId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting availability", e);
+        }
+    }
+
+    private List<Availability> executeAvailabilityQuery(SqlQuery query) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Availability> availabilities = new ArrayList<>();
+            while (rs.next()) {
+                availabilities.add(new Availability(rs.getLong("availability_id"), rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(), rs.getLong("listings_listing_id")));
+            }
+            return availabilities;
+        }
+    }
+
+    public List<Availability> getAvailabilities() {
+        SqlQuery query = new SqlQuery("SELECT * FROM availabilities");
+        try {
+            return executeAvailabilityQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all availabilities", e);
+        }
+    }
+
+    public void insertBooking(Booking booking) {
+        SqlQuery query = new SqlQuery("INSERT INTO bookings (start_date, end_date, transaction_date, amount, currency, payment_method, users_sin, listings_listing_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                booking.start_date(), booking.end_date(), booking.transaction_date(), booking.amount(), booking.currency(), booking.payment_method(), booking.users_sin(), booking.listings_listing_id());
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting booking", e);
+        }
+    }
+
+    public void deleteBooking(long bookingId) {
+        SqlQuery query = new SqlQuery("DELETE FROM bookings WHERE booking_id = ?", bookingId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting booking", e);
+        }
+    }
+
+    private List<Booking> executeBookingQuery(SqlQuery query) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Booking> bookings = new ArrayList<>();
+            while (rs.next()) {
+                bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(), rs.getBigDecimal("amount"), rs.getString("currency"), rs.getString("payment_method"), rs.getLong("users_sin"), rs.getLong("listings_listing_id")));
+            }
+            return bookings;
+        }
+    }
+
+    public List<Booking> getBookings() {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings");
+        try {
+            return executeBookingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all bookings", e);
+        }
+    }
+
+    public void insertReview(Review review) {
+        SqlQuery query = new SqlQuery("INSERT INTO reviews (rating_of_listing, rating_of_host, rating_of_renter, comment_from_renter, comment_from_host, bookings_booking_id) VALUES (?, ?, ?, ?, ?, ?)",
+                review.rating_of_listing(), review.rating_of_host(), review.rating_of_renter(), review.comment_from_renter(), review.comment_from_host(), review.bookings_booking_id());
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting review", e);
+        }
+    }
+
+    public void deleteReview(long reviewId) {
+        SqlQuery query = new SqlQuery("DELETE FROM reviews WHERE review_id = ?", reviewId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting review", e);
+        }
+    }
+
+    private List<Review> executeReviewQuery(SqlQuery query) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Review> reviews = new ArrayList<>();
+            while (rs.next()) {
+                reviews.add(new Review(rs.getLong("review_id"), rs.getInt("rating_of_listing"), rs.getInt("rating_of_host"), rs.getInt("rating_of_renter"), rs.getString("comment_from_renter"), rs.getString("comment_from_host"), rs.getLong("bookings_booking_id")));
+            }
+            return reviews;
+        }
+    }
+
+    public List<Review> getReviews() {
+        SqlQuery query = new SqlQuery("SELECT * FROM reviews");
+        try {
+            return executeReviewQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all reviews", e);
+        }
+    }
+
 
     public List<Amenity> getAmenities() {
         String sql = "SELECT * FROM amenities";
