@@ -131,16 +131,4 @@ class DaoTest {
         assertFalse(dao.listingExists(retrievedListings.get(0)));
 
     }
-
-    @org.junit.jupiter.api.Test
-    void insertListing() {
-    }
-
-    @org.junit.jupiter.api.Test
-    void listingExists() {
-    }
-
-    @org.junit.jupiter.api.Test
-    void getAmenities() {
-    }
 }
