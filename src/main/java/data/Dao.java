@@ -64,7 +64,6 @@ public class Dao {
                     "latitude decimal(9,6)  NOT NULL," +
                     "city varchar(20)  NOT NULL," +
                     "country varchar(20)  NOT NULL," +
-                    "amenities varchar(100)  NOT NULL," +
                     "users_sin BIGINT  NOT NULL," +
                     "PRIMARY KEY (listing_id)" +
                     ");";
@@ -366,7 +365,7 @@ public class Dao {
                 listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"),
                         rs.getBigDecimal("price_per_night"),
                         rs.getString("postal_code"), rs.getBigDecimal("longitude"), rs.getBigDecimal("latitude"),
-                        rs.getString("city"), rs.getString("country"), rs.getString("amenities"),
+                        rs.getString("city"), rs.getString("country"),
                         rs.getLong("users_sin")));
             }
             return listings;
@@ -377,9 +376,9 @@ public class Dao {
         // Note: we disregard the `listing_id` column as it is an auto-increment column
         // whose value is automatically generated.
         SqlQuery query = new SqlQuery("INSERT INTO listings (listing_type, price_per_night, postal_code, longitude," +
-                "latitude, city, country, amenities, users_sin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "latitude, city, country, users_sin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 listing.listing_type(), listing.price_per_night(), listing.postal_code(), listing.longitude(),
-                listing.latitude(), listing.city(), listing.country(), listing.amenities(), listing.users_sin());
+                listing.latitude(), listing.city(), listing.country(), listing.users_sin());
         try {
             executeStatement(query);
         } catch (SQLException e) {
