@@ -19,7 +19,7 @@ public class ListingService {
         this.dao = dao;
     }
 
-    public void addListing(Listing listing) {
+    public void addListing(Listing listing) throws ServiceException{
 
         if (!dao.listingExists(listing)) {
             dao.insertListing(listing);
@@ -32,7 +32,7 @@ public class ListingService {
         }
     }
 
-    public void deleteListing(long listingId) {
+    public void deleteListing(long listingId) throws ServiceException{
         if (!dao.listingIdExists(listingId)) {
             if (dao.hasFutureBookings(listingId)) {
                 throw new ServiceException(
@@ -45,7 +45,7 @@ public class ListingService {
         }
     }
 
-    public void updateListingPrice(long listingId, BigDecimal newPrice) {
+    public void updateListingPrice(long listingId, BigDecimal newPrice) throws ServiceException{
         // compareTo returns -1 if newPrice < 0
         // TODO double check requirements
         if (newPrice.compareTo(BigDecimal.ZERO) < 0) {
