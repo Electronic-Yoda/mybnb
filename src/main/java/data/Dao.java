@@ -344,20 +344,6 @@ public class Dao {
         }
     }
 
-    private List<Booking> executeBookingQuery(SqlQuery query) throws SQLException {
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
-            for (int i = 0; i < query.parameters().length; i++) {
-                stmt.setObject(i + 1, query.parameters()[i]);
-            }
-            ResultSet rs = stmt.executeQuery();
-            List<Booking> bookings = new ArrayList<>();
-            while (rs.next()) {
-                bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(), rs.getBigDecimal("amount"), rs.getString("currency"), rs.getString("payment_method"), rs.getLong("users_sin"), rs.getLong("listings_listing_id")));
-            }
-            return bookings;
-        }
-    }
 
     public List<Booking> getBookings() {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings");
