@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -33,14 +34,14 @@ public class ListingService {
 
     public void deleteListing(long listingId) {
         if (!dao.listingIdExists(listingId)) {
-            // TODO Check if future bookings exist
-
+            if (dao.hasFutureBookings(listingId)) {
+                throw new ServiceException(
+                        String.format("Unable to delete listing because there are existing bookings."));
+            }
             dao.deleteListing(listingId);
         } else {
             throw new ServiceException(
-                    String.format(
-                            "Unable to add listing because listing with id, %d, doesnt exists",
-                            listingId));
+                    String.format("Unable to delete listing because listing with id, %d, doesnt exists", listingId));
         }
     }
 
