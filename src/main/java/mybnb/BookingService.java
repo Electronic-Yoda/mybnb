@@ -14,11 +14,17 @@ public class BookingService {
         this.dao = dao;
     }
 
-    public void addBooking(long listingId, LocalDate startDate, LocalDate endDate) {
+    public void addBooking(Long listingId, LocalDate startDate, LocalDate endDate) {
         // TODO: Implement method
+
+
+        // Require hoster and renter id
+        // Check if availiabty exists at specified dates
+
+        // If so book room, 
     }
 
-    public void cancelBooking(long rentingId) {
+    public void cancelBooking(Long rentingId) {
         // TODO: Implement method
     }
 }
