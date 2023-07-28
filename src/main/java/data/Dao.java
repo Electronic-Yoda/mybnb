@@ -485,7 +485,7 @@ public class Dao {
         }
     }
 
-    public Availability getAvailability(long listingId, LocalDate startDate, LocalDate endDate) throws Exception {
+    public Availability getAvailability(Long listingId, LocalDate startDate, LocalDate endDate) {
         SqlQuery query = new SqlQuery(
                 "SELECT * FROM availabilities WHERE listings_listing_id = ?", listingId);
 
@@ -499,11 +499,22 @@ public class Dao {
 
                 // !isAfter === isEqual and isBefore
                 if (!availableStartDate.isAfter(startDate) && !availableEndDate.isBefore(endDate)) {
-                    return  availabilities.get(i);
+                    return availabilities.get(i);
                 }
             }
-            // TODO make custom exception
-            throw new Exception(String.format("No availiability between %tF to %tF", startDate, endDate));
+            
+            throw new DataAccessException(String.format("No availiability between %tF to %tF", startDate, endDate));
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting availabilities.", e);
+        }
+    }
+
+    public boolean listingAvailabilityExists(Long listingId, LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery(
+                "SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?", listingId, startDate, endDate);
+
+        try {
+            return executeAvailabilityQuery(query).isEmpty();
         } catch (SQLException e) {
             throw new DataAccessException("Error getting availabilities.", e);
         }
@@ -531,44 +542,40 @@ public class Dao {
         }
     }
 
-    public void addBooking(Long listingId, LocalDate startDate, LocalDate endDate, String payment_method, Long tenantSin) throws Exception {
-      try {
-            Availability availability = getAvailability(listingId, startDate, endDate);
-            LocalDate availableStartDate = availability.start_date();
-            LocalDate availableEndDate = availability.end_date();
+    public void addBooking(Long listingId, LocalDate startDate, LocalDate endDate, String payment_method, Long tenantSin) {
+        Availability availability = getAvailability(listingId, startDate, endDate);
+        LocalDate availableStartDate = availability.start_date();
+        LocalDate availableEndDate = availability.end_date();
 
-            // Delete existing availabilty
-            deleteAvailability(listingId, availableStartDate, availableEndDate);
+        // Delete existing availabilty
+        deleteAvailability(listingId, availableStartDate, availableEndDate);
 
-            // Case 1: Booking is in between availability range
-            if (availableStartDate.isAfter(startDate) && availableEndDate.isBefore(endDate)) {
-                insertAvailability(new Availability(null, availableStartDate, startDate, listingId));
-                insertAvailability(new Availability(null, endDate, availableEndDate, listingId));
-            }
+        // Case 1: Booking is in between availability range
+        if (availableStartDate.isAfter(startDate) && availableEndDate.isBefore(endDate)) {
+            insertAvailability(new Availability(null, availableStartDate, startDate, listingId));
+            insertAvailability(new Availability(null, endDate, availableEndDate, listingId));
+        }
 
-            // Case 2: Booking is in the first half of availabilty range
-            else if (availableStartDate.isEqual(startDate) && availableEndDate.isAfter(endDate)) {
-                insertAvailability(new Availability(null, endDate, availableEndDate, listingId));
-            }
+        // Case 2: Booking is in the first half of availabilty range
+        else if (availableStartDate.isEqual(startDate) && availableEndDate.isAfter(endDate)) {
+            insertAvailability(new Availability(null, endDate, availableEndDate, listingId));
+        }
 
-            // Case 3: Booking is in last half of availabilty range
-            else if (availableStartDate.isBefore(startDate) && availableEndDate.isEqual(endDate)) {
-                insertAvailability(new Availability(null, availableStartDate, startDate, listingId));
-            }
+        // Case 3: Booking is in last half of availabilty range
+        else if (availableStartDate.isBefore(startDate) && availableEndDate.isEqual(endDate)) {
+            insertAvailability(new Availability(null, availableStartDate, startDate, listingId));
+        }
 
-            // Case 4: Booking date range exactly matches to availabilty date range
-            // No need to create new availability
+        // Case 4: Booking date range exactly matches to availabilty date range
+        // No need to create new availability
 
-            Listing listing = getListingById(listingId);
-            BigDecimal amount = listing.price_per_night().multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(startDate, endDate)), new MathContext(2));
+        Listing listing = getListingById(listingId);
+        BigDecimal amount = listing.price_per_night().multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(startDate, endDate)), new MathContext(2));
 
-            // Insert booking
-            Booking booking = new Booking(null, startDate, endDate, getCurrentDate().toLocalDate(), amount, payment_method, tenantSin, listingId);
-            insertBooking(booking);
+        // Insert booking
+        Booking booking = new Booking(null, startDate, endDate, getCurrentDate().toLocalDate(), amount, payment_method, tenantSin, listingId);
+        insertBooking(booking);
 
-          } catch (SQLException e) {
-              throw new DataAccessException("Error add booking", e);
-          }
       }
 
     public Long insertBooking(Booking booking) {
