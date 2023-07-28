@@ -29,12 +29,7 @@ public class BookingService {
             throw new ServiceException(String.format("Error listing with id, %d, does not exist.", listingId));
         }
 
-        try {
-            dao.addBooking(listingId, startDate, endDate, payment_method, tenantSin);
-        } catch (Exception e) {
-            // TODO Create user defined Exception instead of using expcetion in Dao.getAvailability
-            throw new ServiceException(String.format("No availiability between %tF to %tF", startDate, endDate));
-        }
+        dao.addBooking(listingId, startDate, endDate, payment_method, tenantSin);
     }
 
     public void cancelBooking(Long rentingId) {
