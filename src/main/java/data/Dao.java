@@ -1,11 +1,6 @@
 package data;
 
 import domain.*;
-import domain.Amenity;
-import domain.Booking;
-import domain.Listing;
-import domain.User;
-
 import exception.DataAccessException;
 import filter.UserFilter;
 
@@ -160,9 +155,11 @@ public class Dao {
     public void insertListing(Listing listing) {
         // Note: we disregard the `listing_id` column as it is an auto-increment column
         // whose value is automatically generated.
-        SqlQuery query = new SqlQuery("INSERT INTO listings (listing_type, price_per_night, address, postal_code, longitude," +
-                "latitude, city, country, users_sin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                listing.listing_type(), listing.price_per_night(), listing.address(), listing.postal_code(), listing.longitude(),
+        SqlQuery query = new SqlQuery(
+                "INSERT INTO listings (listing_type, price_per_night, address, postal_code, longitude," +
+                        "latitude, city, country, users_sin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                listing.listing_type(), listing.price_per_night(), listing.address(), listing.postal_code(),
+                listing.longitude(),
                 listing.latitude(), listing.city(), listing.country(), listing.users_sin());
         try {
             executeStatement(query);
@@ -212,7 +209,7 @@ public class Dao {
         SqlQuery query = new SqlQuery("SELECT CURRENT_DATE()");
 
         try (Connection conn = DriverManager.getConnection(url, username, password);
-            PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
 
             ResultSet rs = stmt.executeQuery();
             return rs.getDate(0);
@@ -225,11 +222,11 @@ public class Dao {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ?", listingId);
 
         try (Connection conn = DriverManager.getConnection(url, username, password);
-            PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             List<Booking> bookings = executeBookingQuery(query);
 
             // There are no bookings for this listing
-            if (bookings.isEmpty()) 
+            if (bookings.isEmpty())
                 return false;
 
             LocalDate current_Date = getCurrentDate().toLocalDate();
@@ -283,7 +280,8 @@ public class Dao {
     }
 
     public void insertAvailability(Availability availability) {
-        SqlQuery query = new SqlQuery("INSERT INTO availabilities (start_date, end_date, listings_listing_id) VALUES (?, ?, ?)",
+        SqlQuery query = new SqlQuery(
+                "INSERT INTO availabilities (start_date, end_date, listings_listing_id) VALUES (?, ?, ?)",
                 availability.start_date(), availability.end_date(), availability.listings_listing_id());
         try {
             executeStatement(query);
@@ -310,7 +308,9 @@ public class Dao {
             ResultSet rs = stmt.executeQuery();
             List<Availability> availabilities = new ArrayList<>();
             while (rs.next()) {
-                availabilities.add(new Availability(rs.getLong("availability_id"), rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(), rs.getLong("listings_listing_id")));
+                availabilities
+                        .add(new Availability(rs.getLong("availability_id"), rs.getDate("start_date").toLocalDate(),
+                                rs.getDate("end_date").toLocalDate(), rs.getLong("listings_listing_id")));
             }
             return availabilities;
         }
@@ -325,9 +325,33 @@ public class Dao {
         }
     }
 
+    public boolean listingAvailabilityExists(long listingId, LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery(
+                "SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?");
+        try {
+            return !executeAvailabilityQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all availabilities", e);
+        }
+    }
+
+    public void changeListingAvailability(long listingId, LocalDate prevStartDate, LocalDate prevEndDate,
+            LocalDate newStartDate, LocalDate newEndDate) {
+        SqlQuery query = new SqlQuery(
+                "UPDATE availabilities SET start_date = ?, end_date = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
+                newStartDate, newEndDate, listingId, prevStartDate, prevEndDate);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating listing availabilities.", e);
+        }
+    }
+
     public void insertBooking(Booking booking) {
-        SqlQuery query = new SqlQuery("INSERT INTO bookings (start_date, end_date, transaction_date, amount, currency, payment_method, users_sin, listings_listing_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                booking.start_date(), booking.end_date(), booking.transaction_date(), booking.amount(), booking.currency(), booking.payment_method(), booking.users_sin(), booking.listings_listing_id());
+        SqlQuery query = new SqlQuery(
+                "INSERT INTO bookings (start_date, end_date, transaction_date, amount, currency, payment_method, users_sin, listings_listing_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                booking.start_date(), booking.end_date(), booking.transaction_date(), booking.amount(),
+                booking.currency(), booking.payment_method(), booking.users_sin(), booking.listings_listing_id());
         try {
             executeStatement(query);
         } catch (SQLException e) {
@@ -344,7 +368,6 @@ public class Dao {
         }
     }
 
-
     public List<Booking> getBookings() {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings");
         try {
@@ -355,8 +378,10 @@ public class Dao {
     }
 
     public void insertReview(Review review) {
-        SqlQuery query = new SqlQuery("INSERT INTO reviews (rating_of_listing, rating_of_host, rating_of_renter, comment_from_renter, comment_from_host, bookings_booking_id) VALUES (?, ?, ?, ?, ?, ?)",
-                review.rating_of_listing(), review.rating_of_host(), review.rating_of_renter(), review.comment_from_renter(), review.comment_from_host(), review.bookings_booking_id());
+        SqlQuery query = new SqlQuery(
+                "INSERT INTO reviews (rating_of_listing, rating_of_host, rating_of_renter, comment_from_renter, comment_from_host, bookings_booking_id) VALUES (?, ?, ?, ?, ?, ?)",
+                review.rating_of_listing(), review.rating_of_host(), review.rating_of_renter(),
+                review.comment_from_renter(), review.comment_from_host(), review.bookings_booking_id());
         try {
             executeStatement(query);
         } catch (SQLException e) {
@@ -382,7 +407,9 @@ public class Dao {
             ResultSet rs = stmt.executeQuery();
             List<Review> reviews = new ArrayList<>();
             while (rs.next()) {
-                reviews.add(new Review(rs.getLong("review_id"), rs.getInt("rating_of_listing"), rs.getInt("rating_of_host"), rs.getInt("rating_of_renter"), rs.getString("comment_from_renter"), rs.getString("comment_from_host"), rs.getLong("bookings_booking_id")));
+                reviews.add(new Review(rs.getLong("review_id"), rs.getInt("rating_of_listing"),
+                        rs.getInt("rating_of_host"), rs.getInt("rating_of_renter"), rs.getString("comment_from_renter"),
+                        rs.getString("comment_from_host"), rs.getLong("bookings_booking_id")));
             }
             return reviews;
         }
@@ -396,6 +423,5 @@ public class Dao {
             throw new DataAccessException("Error getting all reviews", e);
         }
     }
-
 
 }

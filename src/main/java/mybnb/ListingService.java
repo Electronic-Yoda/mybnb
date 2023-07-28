@@ -19,7 +19,7 @@ public class ListingService {
         this.dao = dao;
     }
 
-    public void addListing(Listing listing) throws ServiceException{
+    public void addListing(Listing listing) throws ServiceException {
 
         if (!dao.listingExists(listing)) {
             dao.insertListing(listing);
@@ -32,7 +32,7 @@ public class ListingService {
         }
     }
 
-    public void deleteListing(long listingId) throws ServiceException{
+    public void deleteListing(long listingId) throws ServiceException {
         if (!dao.listingIdExists(listingId)) {
             if (dao.hasFutureBookings(listingId)) {
                 throw new ServiceException(
@@ -45,7 +45,7 @@ public class ListingService {
         }
     }
 
-    public void updateListingPrice(long listingId, BigDecimal newPrice) throws ServiceException{
+    public void updateListingPrice(long listingId, BigDecimal newPrice) throws ServiceException {
         // compareTo returns -1 if newPrice < 0
         // TODO double check requirements
         if (newPrice.compareTo(BigDecimal.ZERO) < 0) {
@@ -64,8 +64,17 @@ public class ListingService {
         }
     }
 
-    public void changeListingAvailability(long listingId, LocalDate startDate, LocalDate endDate, boolean isAvailable) {
-        // TODO: Implement method
+    public void changeListingAvailability(long listingId, LocalDate prevStartDate, LocalDate prevEndDate,
+            LocalDate newStartDate, LocalDate newEndDate) throws ServiceException {
+        if (!dao.listingAvailabilityExists(listingId, prevStartDate, prevEndDate)) {
+            dao.changeListingAvailability(listingId, prevStartDate, prevEndDate, newStartDate, newEndDate);
+        } else {
+            throw new ServiceException(
+                    String.format(
+                            "Unable to add listing because listing with id, %d, with start date," +
+                            "%t, and end date, %t, doesnt exists",
+                            listingId, prevStartDate, prevEndDate));
+        }
     }
 
     // ============= Search methods =============
