@@ -1,4 +1,4 @@
-package mybnb;
+package service;
 
 import domain.User;
 import data.Dao;

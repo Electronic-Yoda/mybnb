@@ -1,4 +1,4 @@
-package mybnb;
+package service;
 
 import data.Dao;
 import domain.Listing;
@@ -7,7 +7,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 
