@@ -12,7 +12,7 @@ public class DbConfig {
     private final String url;
     private final String username;
     private final String password;
-    private List<String> tables = Arrays.asList(
+    private final List<String> tables = Arrays.asList(
             "listing_amenities",
             "amenities",
             "availabilities",
@@ -20,6 +20,19 @@ public class DbConfig {
             "bookings",
             "listings",
             "users");
+
+    public final List<String> amenities = Arrays.asList(
+            "wifi",
+            "tv",
+            "kitchen",
+            "parking",
+            "elevator",
+            "gym",
+            "hot tub",
+            "pool",
+            "washer",
+            "backyard",
+            "dryer");
 
     public DbConfig(String url, String username, String password) {
         this.url = url;
@@ -197,8 +210,6 @@ public class DbConfig {
             stmt.close();
 
             // insert amenities
-            List<String> amenities = Arrays.asList("wifi", "tv", "kitchen", "parking", "elevator", "gym", "hot tub",
-                    "pool", "washer", "dryer");
             String insertAmenitySql = "INSERT INTO amenities (amenity_name) VALUES (?);";
             stmt = conn.prepareStatement(insertAmenitySql);
             for (String amenity : amenities) {

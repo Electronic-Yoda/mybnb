@@ -1,14 +1,12 @@
 package data;
 
 import domain.*;
-import domain.Amenity;
-import domain.Booking;
-import domain.Listing;
-import domain.User;
 
 import exception.DataAccessException;
+import filter.ListingFilter;
 import filter.UserFilter;
 
+import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
@@ -34,22 +32,65 @@ public class Dao {
         this.password = "";
     }
 
-    private void executeStatement(SqlQuery query) throws SQLException {
+    // if the query is an insert statement where the key is automatically inserted, return the generated id
+    // otherwise, return null
+    private Long executeStatement(SqlQuery query) throws SQLException {
         try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+             PreparedStatement stmt = conn.prepareStatement(query.sql(), Statement.RETURN_GENERATED_KEYS)) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
             stmt.executeUpdate();
+            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getLong(1);
+                } else {
+                    return null; // no keys generated
+                }
+            }
         }
     }
 
+
+    private SqlQuery getInsertStatement(Object domainObject, String tableName) {
+        StringBuilder sql = new StringBuilder("INSERT INTO ");
+        sql.append(tableName + " (");
+        ArrayList<Object> parameters = new ArrayList<>();
+
+        int count = 0;
+        RecordComponent[] components = domainObject.getClass().getRecordComponents();
+        for (RecordComponent component : components) {
+            try {
+                Object name = component.getName();
+                Object value = component.getAccessor().invoke(domainObject);
+                if (count < components.length - 1) {
+                    sql.append(name + ", ");
+                } else {
+                    sql.append(name + ")");
+                }
+                count++;
+
+                parameters.add(value);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        for (int i = 0; i < components.length; i++) {
+            if (i == 0) {
+                sql.append(" VALUES (");
+            }
+            if (i < components.length - 1) {
+                sql.append("?, ");
+            } else {
+                sql.append("?)");
+            }
+        }
+        return new SqlQuery(sql.toString(), parameters.toArray());
+    }
+
     public void insertUser(User user) {
-        SqlQuery query = new SqlQuery(
-                "INSERT INTO users (sin, name, address, birthdate, occupation) VALUES (?, ?, ?, ?, ?)",
-                user.sin(), user.name(), user.address(), Date.valueOf(user.birthdate()), user.occupation());
         try {
-            executeStatement(query);
+            executeStatement(getInsertStatement(user, "users"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting user", e);
         }
@@ -101,25 +142,18 @@ public class Dao {
     public List<User> getUsersByFilter(UserFilter filter) {
         StringBuilder sql = new StringBuilder("SELECT * FROM users WHERE 1 = 1");
         List<Object> parameters = new ArrayList<>();
-        if (filter.user().sin() != null) {
-            sql.append(" AND sin = ?");
-            parameters.add(filter.user().sin());
-        }
-        if (filter.user().name() != null) {
-            sql.append(" AND name = ?");
-            parameters.add(filter.user().name());
-        }
-        if (filter.user().address() != null) {
-            sql.append(" AND address = ?");
-            parameters.add(filter.user().address());
-        }
-        if (filter.user().birthdate() != null) {
-            sql.append(" AND birthdate = ?");
-            parameters.add(filter.user().birthdate());
-        }
-        if (filter.user().occupation() != null) {
-            sql.append(" AND occupation = ?");
-            parameters.add(filter.user().occupation());
+        if (filter.user() != null) {
+            for (RecordComponent component : filter.user().getClass().getRecordComponents()) {
+                try {
+                    Object value = component.getAccessor().invoke(filter.user());
+                    if (value != null) {
+                        sql.append(" AND " + component.getName() + " = ?");
+                        parameters.add(value);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
         SqlQuery query = new SqlQuery(sql.toString(), parameters.toArray());
         try {
@@ -132,7 +166,12 @@ public class Dao {
     public User getUser(Long sin) {
         SqlQuery query = new SqlQuery("SELECT * FROM users WHERE sin=?", sin);
         try {
-            return executeUserQuery(query).get(0);
+            List<User> users = executeUserQuery(query);
+            if (users.isEmpty()) {
+                return null;
+            } else {
+                return users.get(0);
+            }
         } catch (SQLException e) {
             throw new DataAccessException("Error getting user", e);
         }
@@ -157,15 +196,9 @@ public class Dao {
         }
     }
 
-    public void insertListing(Listing listing) {
-        // Note: we disregard the `listing_id` column as it is an auto-increment column
-        // whose value is automatically generated.
-        SqlQuery query = new SqlQuery("INSERT INTO listings (listing_type, price_per_night, address, postal_code, longitude," +
-                "latitude, city, country, users_sin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                listing.listing_type(), listing.price_per_night(), listing.address(), listing.postal_code(), listing.longitude(),
-                listing.latitude(), listing.city(), listing.country(), listing.users_sin());
+    public Long insertListing(Listing listing) {
         try {
-            executeStatement(query);
+            return executeStatement(getInsertStatement(listing, "listings"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting listing", e);
         }
@@ -178,6 +211,21 @@ public class Dao {
             return !executeListingQuery(query).isEmpty();
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if listing exists", e);
+        }
+    }
+
+    public Listing getListingByLocation(String postal_code, String city, String country) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
+                postal_code, city, country);
+        try {
+            List<Listing> listings = executeListingQuery(query);
+            if (listings.isEmpty()) {
+                return null;
+            } else {
+                return listings.get(0);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting listing by location", e);
         }
     }
 
@@ -207,6 +255,99 @@ public class Dao {
             throw new DataAccessException("Error getting all listings", e);
         }
     }
+
+
+    public List<Listing> getListingsByFilter(ListingFilter filter) {
+        StringBuilder sql = new StringBuilder("SELECT listings.* FROM listings ");
+        List<Object> parameters = new ArrayList<>();
+
+        // join with availabilities table if availability filter is not empty
+        if (filter.availability() != null) {
+            sql.append("JOIN availabilities ON listings.listing_id = availabilities.listings_listing_id ");
+        }
+
+        // join with amenities table if amenities filter is not empty
+        if (filter.amenities() != null && !filter.amenities().isEmpty()) {
+            sql.append("JOIN listing_amenities ON listings.listing_id = listing_amenities.listing_id ");
+            sql.append("JOIN amenities ON listing_amenities.amenity_id = amenities.amenity_id ");
+        }
+
+        sql.append("WHERE 1 = 1"); // This is always true, and allows us to use AND in the following statements
+
+        // filter by listing fields
+        if (filter.listing() != null) {
+            for (RecordComponent component : filter.listing().getClass().getRecordComponents()) {
+                try {
+                    Object value = component.getAccessor().invoke(filter.listing());
+                    if (value != null) {
+                        sql.append(" AND " + component.getName() + " = ?");
+                        parameters.add(value);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        // filter by availability fields
+        if (filter.availability() != null) {
+            for (RecordComponent component : filter.availability().getClass().getRecordComponents()) {
+                try {
+                    Object value = component.getAccessor().invoke(filter.availability());
+                    if (value != null) {
+                        sql.append(" AND " + component.getName() + " = ?");
+                        parameters.add(value);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        // first, find all listings that have any of the amenities in the filter
+        if (filter.amenities() != null && !filter.amenities().isEmpty()) {
+            sql.append(" AND amenities.amenity_name IN (");
+            for (int i = 0; i < filter.amenities().size(); i++) {
+                sql.append("?");
+                if (i < filter.amenities().size() - 1) {
+                    sql.append(", ");
+                }
+                parameters.add(filter.amenities().get(i));
+            }
+            sql.append(")");
+        }
+        // then, only select listings that match all the amenities in the filter
+        if (filter.amenities() != null && !filter.amenities().isEmpty()) {
+            sql.append(" GROUP BY listings.listing_id");
+            sql.append(" HAVING COUNT(DISTINCT amenities.amenity_name) = ?");
+            parameters.add(filter.amenities().size());
+        }
+
+        SqlQuery query = new SqlQuery(sql.toString(), parameters.toArray());
+        try {
+            return executeListingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting listings by filter", e);
+        }
+    }
+
+    public List<String> getAmenitiesByListingId(Long listingId) {
+        SqlQuery query = new SqlQuery("SELECT amenity_name FROM amenities " +
+                "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
+                "WHERE listing_amenities.listing_id = ?", listingId);
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            stmt.setObject(1, listingId);
+            ResultSet rs = stmt.executeQuery();
+            List<String> amenities = new ArrayList<>();
+            while (rs.next()) {
+                amenities.add(rs.getString("amenity_name"));
+            }
+            return amenities;
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting listing amenities", e);
+        }
+    }
+
+
 
     public Date getCurrentDate() {
         SqlQuery query = new SqlQuery("SELECT CURRENT_DATE()");
@@ -282,11 +423,9 @@ public class Dao {
         }
     }
 
-    public void insertAvailability(Availability availability) {
-        SqlQuery query = new SqlQuery("INSERT INTO availabilities (start_date, end_date, listings_listing_id) VALUES (?, ?, ?)",
-                availability.start_date(), availability.end_date(), availability.listings_listing_id());
+    public Long insertAvailability(Availability availability) {
         try {
-            executeStatement(query);
+            return executeStatement(getInsertStatement(availability, "availabilities"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting availability", e);
         }
@@ -310,7 +449,9 @@ public class Dao {
             ResultSet rs = stmt.executeQuery();
             List<Availability> availabilities = new ArrayList<>();
             while (rs.next()) {
-                availabilities.add(new Availability(rs.getLong("availability_id"), rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(), rs.getLong("listings_listing_id")));
+                availabilities.add(new Availability(rs.getLong("availability_id"),
+                        rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(),
+                        rs.getLong("listings_listing_id")));
             }
             return availabilities;
         }
@@ -325,11 +466,19 @@ public class Dao {
         }
     }
 
-    public void insertBooking(Booking booking) {
-        SqlQuery query = new SqlQuery("INSERT INTO bookings (start_date, end_date, transaction_date, amount, currency, payment_method, users_sin, listings_listing_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                booking.start_date(), booking.end_date(), booking.transaction_date(), booking.amount(), booking.currency(), booking.payment_method(), booking.users_sin(), booking.listings_listing_id());
+    public void insertAmenityForListing(long listingId, String amenityName) {
+        SqlQuery query = new SqlQuery("INSERT INTO listing_amenities (listing_id, amenity_id) " +
+                "VALUES (?, (SELECT amenity_id FROM amenities WHERE amenity_name = ?))", listingId, amenityName);
         try {
             executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting amenity for listing", e);
+        }
+    }
+
+    public Long insertBooking(Booking booking) {
+    try {
+            return executeStatement(getInsertStatement(booking, "bookings"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting booking", e);
         }
@@ -355,10 +504,8 @@ public class Dao {
     }
 
     public void insertReview(Review review) {
-        SqlQuery query = new SqlQuery("INSERT INTO reviews (rating_of_listing, rating_of_host, rating_of_renter, comment_from_renter, comment_from_host, bookings_booking_id) VALUES (?, ?, ?, ?, ?, ?)",
-                review.rating_of_listing(), review.rating_of_host(), review.rating_of_renter(), review.comment_from_renter(), review.comment_from_host(), review.bookings_booking_id());
         try {
-            executeStatement(query);
+            executeStatement(getInsertStatement(review, "reviews"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting review", e);
         }
