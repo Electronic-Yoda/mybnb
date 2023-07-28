@@ -94,7 +94,7 @@ public class BookingService {
         try {
             booking = dao.getBooking(booking_id);
         } catch (DataAccessException e) {
-            throw new ServiceException(String.format("Unable to retrieve booking."));
+            throw new ServiceException(String.format("Unable to retrieve booking."), e);
         }
         if (tenant_sin != booking.tenant_sin()) {
             throw new ServiceException(String.format("Unable to cancel booking because tenant sin does not match. " +
