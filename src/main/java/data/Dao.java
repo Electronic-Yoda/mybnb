@@ -340,15 +340,10 @@ public class Dao {
         SqlQuery query = new SqlQuery(
                 "UPDATE availabilities SET start_date = ?, end_date = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
                 newStartDate, newEndDate, listingId, prevStartDate, prevEndDate);
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
-            for (int i = 0; i < query.parameters().length; i++) {
-                stmt.setObject(i + 1, query.parameters()[i]);
-            }
-            stmt.executeQuery();
-
+        try {
+            executeStatement(query);
         } catch (SQLException e) {
-            throw new DataAccessException("Error updating listing availabilities.", e);
+           throw new DataAccessException("Error updating listing availabilities.", e);
         }
     }
 
@@ -394,7 +389,7 @@ public class Dao {
         }
     }
 
-    public void deleteReview(long reviewId) {
+    public void deleteReview(Long reviewId) {
         SqlQuery query = new SqlQuery("DELETE FROM reviews WHERE review_id = ?", reviewId);
         try {
             executeStatement(query);
