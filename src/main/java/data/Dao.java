@@ -8,13 +8,10 @@ import filter.UserFilter;
 
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.time.temporal.ChronoUnit;
 
 public class Dao {
     private final String url;
@@ -33,6 +30,7 @@ public class Dao {
         this.username = "root";
         this.password = "";
     }
+
 
     // if the query is an insert statement where the key is automatically inserted, return the generated id
     // otherwise, return null
@@ -408,7 +406,8 @@ public class Dao {
             while (rs.next()) {
                 bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(),
                         rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
-                        rs.getBigDecimal("amount"), rs.getString("payment_method"), rs.getLong("clients_sin"),
+                        rs.getBigDecimal("amount"), rs.getString("payment_method"),
+                        rs.getLong("card_number"), rs.getLong("clients_sin"),
                         rs.getLong("listings_listing_id")));
             }
             return bookings;
@@ -485,7 +484,7 @@ public class Dao {
         }
     }
 
-    public Availability getAvailability(Long listingId, LocalDate startDate, LocalDate endDate) {
+    public Availability getAffectedAvailability(Long listingId, LocalDate startDate, LocalDate endDate) {
         SqlQuery query = new SqlQuery(
                 "SELECT * FROM availabilities WHERE listings_listing_id = ?", listingId);
 
@@ -503,7 +502,7 @@ public class Dao {
                 }
             }
             
-            throw new DataAccessException(String.format("No availiability between %tF to %tF", startDate, endDate));
+            throw new DataAccessException(String.format("No availability between %tF to %tF", startDate, endDate));
         } catch (SQLException e) {
             throw new DataAccessException("Error getting availabilities.", e);
         }
@@ -542,41 +541,6 @@ public class Dao {
         }
     }
 
-    public void addBooking(Long listingId, LocalDate startDate, LocalDate endDate, String payment_method, Long tenantSin) {
-        Availability availability = getAvailability(listingId, startDate, endDate);
-        LocalDate availableStartDate = availability.start_date();
-        LocalDate availableEndDate = availability.end_date();
-
-        // Delete existing availabilty
-        deleteAvailability(listingId, availableStartDate, availableEndDate);
-
-        // Case 1: Booking is in between availability range
-        if (availableStartDate.isAfter(startDate) && availableEndDate.isBefore(endDate)) {
-            insertAvailability(new Availability(null, availableStartDate, startDate, listingId));
-            insertAvailability(new Availability(null, endDate, availableEndDate, listingId));
-        }
-
-        // Case 2: Booking is in the first half of availabilty range
-        else if (availableStartDate.isEqual(startDate) && availableEndDate.isAfter(endDate)) {
-            insertAvailability(new Availability(null, endDate, availableEndDate, listingId));
-        }
-
-        // Case 3: Booking is in last half of availabilty range
-        else if (availableStartDate.isBefore(startDate) && availableEndDate.isEqual(endDate)) {
-            insertAvailability(new Availability(null, availableStartDate, startDate, listingId));
-        }
-
-        // Case 4: Booking date range exactly matches to availabilty date range
-        // No need to create new availability
-
-        Listing listing = getListingById(listingId);
-        BigDecimal amount = listing.price_per_night().multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(startDate, endDate)), new MathContext(2));
-
-        // Insert booking
-        Booking booking = new Booking(null, startDate, endDate, getCurrentDate().toLocalDate(), amount, payment_method, tenantSin, listingId);
-        insertBooking(booking);
-
-      }
 
     public Long insertBooking(Booking booking) {
         try {
