@@ -1,12 +1,15 @@
 package data;
 
-import domain.Amenity;
-import domain.Listing;
-import domain.User;
+import domain.*;
+
 import exception.DataAccessException;
+import filter.ListingFilter;
 import filter.UserFilter;
 
+import java.lang.reflect.RecordComponent;
+import java.math.BigDecimal;
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,15 +18,6 @@ public class Dao {
     private final String url;
     private final String username;
     private final String password;
-    private List<String> tables = Arrays.asList(
-        "listing_amenities",
-        "amenities",
-        "availabilities",
-        "reviews",
-        "bookings",
-        "listings",
-        "users"
-    );
 
     public Dao(String url, String username, String password) {
         this.url = url;
@@ -38,231 +32,65 @@ public class Dao {
         this.password = "";
     }
 
-    public void createTables() {
-        try (Connection conn = DriverManager.getConnection(url, username, password)) {
-            String createTableSql;
-            PreparedStatement stmt;
-
-            // availability table
-            createTableSql = "CREATE TABLE availabilities (" +
-                    "availability_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
-                    "start_date date  NOT NULL," +
-                    "end_date date  NOT NULL," +
-                    "listings_listing_id BIGINT UNSIGNED NOT NULL," +
-                    "PRIMARY KEY (availability_id)" +
-                    ");";
-            stmt = conn.prepareStatement(createTableSql);
-            stmt.executeUpdate();
-            stmt.close();
-
-
-            // listings table
-            createTableSql = "CREATE TABLE listings (" +
-                    "listing_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
-                    "listing_type char(10)  NOT NULL," +
-                    "price_per_night decimal(10,2)  NOT NULL," +
-                    "postal_code char(12)  NOT NULL," +
-                    "longitude decimal(9,6)  NOT NULL," +
-                    "latitude decimal(9,6)  NOT NULL," +
-                    "city varchar(20)  NOT NULL," +
-                    "country varchar(20)  NOT NULL," +
-                    "amenities varchar(100)  NOT NULL," +
-                    "users_sin BIGINT  NOT NULL," +
-                    "PRIMARY KEY (listing_id)" +
-                    ");";
-            stmt = conn.prepareStatement(createTableSql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            // bookings table
-            createTableSql = "CREATE TABLE bookings (" +
-                    "booking_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
-                    "start_date date  NOT NULL," +
-                    "end_date date  NOT NULL," +
-                    "transaction_date date  NOT NULL," +
-                    "amount decimal(10,2)  NOT NULL," +
-                    "currency varchar(3)  NOT NULL," +
-                    "payment_method varchar(20)  NOT NULL," +
-                    "users_sin BIGINT  NOT NULL," +
-                    "listings_listing_id BIGINT UNSIGNED NOT NULL," +
-                    "PRIMARY KEY (booking_id)" +
-                    ");";
-            stmt = conn.prepareStatement(createTableSql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            // reviews table
-            createTableSql = "CREATE TABLE reviews (" +
-                    "review_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
-                    "rating_of_listing int  NULL," +
-                    "rating_of_host int  NULL," +
-                    "rating_of_renter int  NULL," +
-                    "comment_from_renter varchar(500)  NULL," +
-                    "comment_from_host varchar(500)  NULL," +
-                    "bookings_booking_id BIGINT UNSIGNED NOT NULL UNIQUE," +
-                    "PRIMARY KEY (review_id)" +
-                    ");";
-            stmt = conn.prepareStatement(createTableSql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            // users table
-            createTableSql = "CREATE TABLE users (" +
-                    "sin BIGINT NOT NULL," +
-                    "name varchar(20)  NOT NULL," +
-                    "address varchar(30)  NOT NULL," +
-                    "birthdate date  NOT NULL," +
-                    "occupation varchar(20)  NOT NULL," +
-                    "PRIMARY KEY (sin)" +
-                    ");";
-            stmt = conn.prepareStatement(createTableSql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            // amenities table
-            createTableSql = "CREATE TABLE amenities (" +
-                    "amenity_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
-                    "amenity_name varchar(50)  NOT NULL UNIQUE," +
-                    "PRIMARY KEY (amenity_id)" +
-                    ");";
-            stmt = conn.prepareStatement(createTableSql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            // listing_amenities table
-            createTableSql = "CREATE TABLE listing_amenities (" +
-                    "listing_id BIGINT UNSIGNED NOT NULL," +
-                    "amenity_id BIGINT UNSIGNED NOT NULL," +
-                    "PRIMARY KEY (listing_id, amenity_id)" +
-                    ");";
-            stmt = conn.prepareStatement(createTableSql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            // add foreign key constraints
-            String addForeignKeySql;
-
-            addForeignKeySql = "ALTER TABLE availabilities " +
-                    "ADD CONSTRAINT availability_listings " +
-                    "FOREIGN KEY (listings_listing_id) " +
-                    "REFERENCES listings (listing_id);";
-            stmt = conn.prepareStatement(addForeignKeySql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            addForeignKeySql = "ALTER TABLE bookings " +
-                    "ADD CONSTRAINT bookings_users " +
-                    "FOREIGN KEY (users_sin) " +
-                    "REFERENCES users (sin);";
-            stmt = conn.prepareStatement(addForeignKeySql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            addForeignKeySql = "ALTER TABLE reviews " +
-                    "ADD CONSTRAINT reviews_bookings " +
-                    "FOREIGN KEY (bookings_booking_id) " +
-                    "REFERENCES bookings (booking_id);";
-            stmt = conn.prepareStatement(addForeignKeySql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            addForeignKeySql = "ALTER TABLE bookings " +
-                    "ADD CONSTRAINT user_bookings_listings " +
-                    "FOREIGN KEY (listings_listing_id) " +
-                    "REFERENCES listings (listing_id);";
-            stmt = conn.prepareStatement(addForeignKeySql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            addForeignKeySql = "ALTER TABLE listings " +
-                    "ADD CONSTRAINT users_listings " +
-                    "FOREIGN KEY (users_sin) " +
-                    "REFERENCES users (sin);";
-            stmt = conn.prepareStatement(addForeignKeySql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            addForeignKeySql = "ALTER TABLE listing_amenities " +
-                    "ADD CONSTRAINT listing_amenities_listings " +
-                    "FOREIGN KEY (listing_id) " +
-                    "REFERENCES listings (listing_id);";
-            stmt = conn.prepareStatement(addForeignKeySql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            addForeignKeySql = "ALTER TABLE listing_amenities " +
-                    "ADD CONSTRAINT listing_amenities_amenities " +
-                    "FOREIGN KEY (amenity_id) " +
-                    "REFERENCES amenities (amenity_id);";
-            stmt = conn.prepareStatement(addForeignKeySql);
-            stmt.executeUpdate();
-            stmt.close();
-
-            // insert amenities
-            List<String> amenities = Arrays.asList("wifi", "tv", "kitchen", "parking", "elevator", "gym", "hot tub", "pool", "washer", "dryer");
-            String insertAmenitySql = "INSERT INTO amenities (amenity_name) VALUES (?);";
-            stmt = conn.prepareStatement(insertAmenitySql);
-            for (String amenity : amenities) {
-                stmt.setString(1, amenity);
-                stmt.executeUpdate();
-            }
-            stmt.close();
-
-        } catch (SQLException e) {
-            throw new DataAccessException("Error creating tables", e);
-        }
-    }
-
-    public void dropTables() {
-        try (Connection conn = DriverManager.getConnection(url, username, password)) {
-            for (String table : tables) {
-
-                try (PreparedStatement stmt = conn.prepareStatement("DROP TABLE IF EXISTS " + table)) {
-                    stmt.executeUpdate();
-                }
-            }
-        } catch (SQLException e) {
-            throw new DataAccessException("Error deleting tables", e);
-        }
-    }
-
-    public List<String> getOriginalTables() {
-        return new ArrayList<>(tables);
-    }
-
-    public List<String> getTables() {
-        try (Connection connection = DriverManager.getConnection(url, username, password)) {
-            DatabaseMetaData metaData = connection.getMetaData();
-            String schema = connection.getSchema();
-            ResultSet rs = metaData.getTables(null, schema, "%", new String[]{"TABLE"});
-            List<String> tables = new ArrayList<>();
-            while (rs.next()) {
-                String tableName = rs.getString("TABLE_NAME");
-                if (!tableName.equals("sys_config")) {
-                    tables.add(tableName);
-                }
-            }
-            return tables;
-        } catch (SQLException e) {
-            throw new DataAccessException("Error retrieving table list", e);
-        }
-    }
-
-    private void executeStatement(SqlQuery query) throws SQLException {
+    // if the query is an insert statement where the key is automatically inserted, return the generated id
+    // otherwise, return null
+    private Long executeStatement(SqlQuery query) throws SQLException {
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+             PreparedStatement stmt = conn.prepareStatement(query.sql(), Statement.RETURN_GENERATED_KEYS)) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
             stmt.executeUpdate();
+            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getLong(1);
+                } else {
+                    return null; // no keys generated
+                }
+            }
         }
     }
 
+
+    private SqlQuery getInsertStatement(Object domainObject, String tableName) {
+        StringBuilder sql = new StringBuilder("INSERT INTO ");
+        sql.append(tableName + " (");
+        ArrayList<Object> parameters = new ArrayList<>();
+
+        int count = 0;
+        RecordComponent[] components = domainObject.getClass().getRecordComponents();
+        for (RecordComponent component : components) {
+            try {
+                Object name = component.getName();
+                Object value = component.getAccessor().invoke(domainObject);
+                if (count < components.length - 1) {
+                    sql.append(name + ", ");
+                } else {
+                    sql.append(name + ")");
+                }
+                count++;
+
+                parameters.add(value);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        for (int i = 0; i < components.length; i++) {
+            if (i == 0) {
+                sql.append(" VALUES (");
+            }
+            if (i < components.length - 1) {
+                sql.append("?, ");
+            } else {
+                sql.append("?)");
+            }
+        }
+        return new SqlQuery(sql.toString(), parameters.toArray());
+    }
+
     public void insertUser(User user) {
-        SqlQuery query = new SqlQuery("INSERT INTO users (sin, name, address, birthdate, occupation) VALUES (?, ?, ?, ?, ?)",
-                user.sin(), user.name(), user.address(), Date.valueOf(user.birthdate()), user.occupation());
         try {
-            executeStatement(query);
+            executeStatement(getInsertStatement(user, "users"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting user", e);
         }
@@ -277,9 +105,9 @@ public class Dao {
         }
     }
 
-    private List<User> executeUserQuery(SqlQuery query) throws SQLException{
+    private List<User> executeUserQuery(SqlQuery query) throws SQLException {
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
@@ -314,25 +142,18 @@ public class Dao {
     public List<User> getUsersByFilter(UserFilter filter) {
         StringBuilder sql = new StringBuilder("SELECT * FROM users WHERE 1 = 1");
         List<Object> parameters = new ArrayList<>();
-        if (filter.sin() != null) {
-            sql.append(" AND sin = ?");
-            parameters.add(filter.sin());
-        }
-        if (filter.name() != null) {
-            sql.append(" AND name = ?");
-            parameters.add(filter.name());
-        }
-        if (filter.address() != null) {
-            sql.append(" AND address = ?");
-            parameters.add(filter.address());
-        }
-        if (filter.birthdate() != null) {
-            sql.append(" AND birthdate = ?");
-            parameters.add(filter.birthdate());
-        }
-        if (filter.occupation() != null) {
-            sql.append(" AND occupation = ?");
-            parameters.add(filter.occupation());
+        if (filter.user() != null) {
+            for (RecordComponent component : filter.user().getClass().getRecordComponents()) {
+                try {
+                    Object value = component.getAccessor().invoke(filter.user());
+                    if (value != null) {
+                        sql.append(" AND " + component.getName() + " = ?");
+                        parameters.add(value);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
         SqlQuery query = new SqlQuery(sql.toString(), parameters.toArray());
         try {
@@ -345,7 +166,12 @@ public class Dao {
     public User getUser(Long sin) {
         SqlQuery query = new SqlQuery("SELECT * FROM users WHERE sin=?", sin);
         try {
-            return executeUserQuery(query).get(0);
+            List<User> users = executeUserQuery(query);
+            if (users.isEmpty()) {
+                return null;
+            } else {
+                return users.get(0);
+            }
         } catch (SQLException e) {
             throw new DataAccessException("Error getting user", e);
         }
@@ -353,29 +179,27 @@ public class Dao {
 
     public List<Listing> executeListingQuery(SqlQuery query) throws SQLException {
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
             ResultSet rs = stmt.executeQuery();
             List<Listing> listings = new ArrayList<>();
             while (rs.next()) {
-                listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"), rs.getBigDecimal("price_per_night"),
+                listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"),
+                        rs.getBigDecimal("price_per_night"), rs.getString("address"),
                         rs.getString("postal_code"), rs.getBigDecimal("longitude"), rs.getBigDecimal("latitude"),
-                        rs.getString("city"), rs.getString("country"), rs.getString("amenities"), rs.getLong("users_sin")));
+                        rs.getString("city"), rs.getString("country"),
+                        rs.getLong("users_sin")));
             }
             return listings;
         }
     }
 
-    public void insertListing(Listing listing) {
-        // Note: we disregard the `listing_id` column as it is an auto-increment column whose value is automatically generated.
-        SqlQuery query = new SqlQuery("INSERT INTO listings (listing_type, price_per_night, postal_code, longitude," +
-                "latitude, city, country, amenities, users_sin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                listing.listing_type(), listing.price_per_night(), listing.postal_code(), listing.longitude(),
-                listing.latitude(), listing.city(), listing.country(), listing.amenities(), listing.users_sin());
+
+    public Long insertListing(Listing listing) {
         try {
-            executeStatement(query);
+            return executeStatement(getInsertStatement(listing, "listings"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting listing", e);
         }
@@ -391,21 +215,358 @@ public class Dao {
         }
     }
 
+    public Listing getListingByLocation(String postal_code, String city, String country) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
+                postal_code, city, country);
+        try {
+            List<Listing> listings = executeListingQuery(query);
+            if (listings.isEmpty()) {
+                return null;
+            } else {
+                return listings.get(0);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting listing by location", e);
+        }
+    }
+
+    public boolean listingIdExists(long listingId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listingId);
+        try {
+            return !executeListingQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if listing_id exists", e);
+        }
+    }
+
+    public void deleteListing(long listingId) {
+        SqlQuery query = new SqlQuery("DELETE FROM listings WHERE listing_id = ?", listingId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting listing", e);
+        }
+    }
+
+    public List<Listing> getListings() {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings");
+        try {
+            return executeListingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all listings", e);
+        }
+    }
 
 
+    public List<Listing> getListingsByFilter(ListingFilter filter) {
+        StringBuilder sql = new StringBuilder("SELECT listings.* FROM listings ");
+        List<Object> parameters = new ArrayList<>();
 
-    public List<Amenity> getAmenities() {
-        String sql = "SELECT * FROM amenities";
+        // join with availabilities table if availability filter is not empty
+        if (filter.availability() != null) {
+            sql.append("JOIN availabilities ON listings.listing_id = availabilities.listings_listing_id ");
+        }
+
+        // join with amenities table if amenities filter is not empty
+        if (filter.amenities() != null && !filter.amenities().isEmpty()) {
+            sql.append("JOIN listing_amenities ON listings.listing_id = listing_amenities.listing_id ");
+            sql.append("JOIN amenities ON listing_amenities.amenity_id = amenities.amenity_id ");
+        }
+
+        sql.append("WHERE 1 = 1"); // This is always true, and allows us to use AND in the following statements
+
+        // filter by listing fields
+        if (filter.listing() != null) {
+            for (RecordComponent component : filter.listing().getClass().getRecordComponents()) {
+                try {
+                    Object value = component.getAccessor().invoke(filter.listing());
+                    if (value != null) {
+                        sql.append(" AND " + component.getName() + " = ?");
+                        parameters.add(value);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        // filter by availability fields
+        if (filter.availability() != null) {
+            for (RecordComponent component : filter.availability().getClass().getRecordComponents()) {
+                try {
+                    Object value = component.getAccessor().invoke(filter.availability());
+                    if (value != null) {
+                        sql.append(" AND " + component.getName() + " = ?");
+                        parameters.add(value);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        // first, find all listings that have any of the amenities in the filter
+        if (filter.amenities() != null && !filter.amenities().isEmpty()) {
+            sql.append(" AND amenities.amenity_name IN (");
+            for (int i = 0; i < filter.amenities().size(); i++) {
+                sql.append("?");
+                if (i < filter.amenities().size() - 1) {
+                    sql.append(", ");
+                }
+                parameters.add(filter.amenities().get(i));
+            }
+            sql.append(")");
+        }
+        // then, only select listings that match all the amenities in the filter
+        if (filter.amenities() != null && !filter.amenities().isEmpty()) {
+            sql.append(" GROUP BY listings.listing_id");
+            sql.append(" HAVING COUNT(DISTINCT amenities.amenity_name) = ?");
+            parameters.add(filter.amenities().size());
+        }
+
+        SqlQuery query = new SqlQuery(sql.toString(), parameters.toArray());
+        try {
+            return executeListingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting listings by filter", e);
+        }
+    }
+
+    public List<String> getAmenitiesByListingId(Long listingId) {
+        SqlQuery query = new SqlQuery("SELECT amenity_name FROM amenities " +
+                "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
+                "WHERE listing_amenities.listing_id = ?", listingId);
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            stmt.setObject(1, listingId);
             ResultSet rs = stmt.executeQuery();
-            List<Amenity> amenities = new ArrayList<>();
+            List<String> amenities = new ArrayList<>();
             while (rs.next()) {
-                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name")));
+                amenities.add(rs.getString("amenity_name"));
             }
             return amenities;
         } catch (SQLException e) {
-            throw new DataAccessException("Error getting amenities", e);
+            throw new DataAccessException("Error getting listing amenities", e);
+        }
+    }
+
+
+
+    public Date getCurrentDate() {
+        SqlQuery query = new SqlQuery("SELECT CURRENT_DATE()");
+
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+
+            ResultSet rs = stmt.executeQuery();
+            return rs.getDate(0);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting date", e);
+        }
+    }
+
+    public boolean hasFutureBookings(long listingId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ?", listingId);
+
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            List<Booking> bookings = executeBookingQuery(query);
+
+            // There are no bookings for this listing
+            if (bookings.isEmpty())
+                return false;
+
+            LocalDate current_Date = getCurrentDate().toLocalDate();
+
+            for (int i = 0; i < bookings.size(); i++) {
+                Booking booking = bookings.get(i);
+
+                if (booking.end_date().isAfter(current_Date))
+                    return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting bookings with listing id, " + listingId, e);
+        }
+    }
+
+    public List<Booking> executeBookingQuery(SqlQuery query) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Booking> bookings = new ArrayList<>();
+            while (rs.next()) {
+                bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(),
+                        rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
+                        rs.getBigDecimal("amount"), rs.getString("currency"),
+                        rs.getString("payment_method"), rs.getLong("users_sin"),
+                        rs.getLong("listings_listing_id")));
+            }
+            return bookings;
+        }
+    }
+
+    public boolean bookingExists(Booking booking) {
+        // TODO
+        // Get bookings related to listingId
+        // Compare booking end date to today, if end date is in the future, return True
+        return false;
+    }
+
+    public void updateListingPrice(long listingId, BigDecimal newPrice) {
+        SqlQuery query = new SqlQuery("UPDATE listings SET price_per_night = ? WHERE listing_id = ?", newPrice,
+                listingId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating existing listing price", e);
+        }
+    }
+
+
+    public Long insertAvailability(Availability availability) {
+        try {
+            return executeStatement(getInsertStatement(availability, "availabilities"));
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting availability", e);
+        }
+    }
+
+    public void deleteAvailability(long availabilityId) {
+        SqlQuery query = new SqlQuery("DELETE FROM availabilities WHERE availability_id = ?", availabilityId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting availability", e);
+        }
+    }
+
+    private List<Availability> executeAvailabilityQuery(SqlQuery query) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Availability> availabilities = new ArrayList<>();
+            while (rs.next()) {
+                availabilities.add(new Availability(rs.getLong("availability_id"),
+                        rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(),
+                        rs.getLong("listings_listing_id")));
+            }
+            return availabilities;
+        }
+    }
+
+    public List<Availability> getAvailabilities() {
+        SqlQuery query = new SqlQuery("SELECT * FROM availabilities");
+        try {
+            return executeAvailabilityQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all availabilities", e);
+        }
+    }
+
+    public boolean listingAvailabilityExists(long listingId, LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery(
+                "SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?");
+        try {
+            return !executeAvailabilityQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all availabilities", e);
+        }
+    }
+
+    public void changeListingAvailability(long listingId, LocalDate prevStartDate, LocalDate prevEndDate,
+            LocalDate newStartDate, LocalDate newEndDate) {
+        SqlQuery query = new SqlQuery(
+                "UPDATE availabilities SET start_date = ?, end_date = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
+                newStartDate, newEndDate, listingId, prevStartDate, prevEndDate);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+           throw new DataAccessException("Error updating listing availabilities.", e);
+        }
+    }
+
+
+    public void insertAmenityForListing(long listingId, String amenityName) {
+        SqlQuery query = new SqlQuery("INSERT INTO listing_amenities (listing_id, amenity_id) " +
+                "VALUES (?, (SELECT amenity_id FROM amenities WHERE amenity_name = ?))", listingId, amenityName);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting amenity for listing", e);
+        }
+    }
+
+    public Long insertBooking(Booking booking) {
+      try {
+              return executeStatement(getInsertStatement(booking, "bookings"));
+          } catch (SQLException e) {
+              throw new DataAccessException("Error inserting booking", e);
+          }
+      }
+
+    public void deleteBooking(long bookingId) {
+        SqlQuery query = new SqlQuery("DELETE FROM bookings WHERE booking_id = ?", bookingId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting booking", e);
+        }
+    }
+
+    public List<Booking> getBookings() {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings");
+        try {
+            return executeBookingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all bookings", e);
+        }
+    }
+
+    public void insertReview(Review review) {
+        try {
+            executeStatement(getInsertStatement(review, "reviews"));
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting review", e);
+        }
+    }
+
+    public void deleteReview(Long reviewId) {
+        SqlQuery query = new SqlQuery("DELETE FROM reviews WHERE review_id = ?", reviewId);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting review", e);
+        }
+    }
+
+    private List<Review> executeReviewQuery(SqlQuery query) throws SQLException {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Review> reviews = new ArrayList<>();
+            while (rs.next()) {
+                reviews.add(new Review(rs.getLong("review_id"), rs.getInt("rating_of_listing"),
+                        rs.getInt("rating_of_host"), rs.getInt("rating_of_renter"), rs.getString("comment_from_renter"),
+                        rs.getString("comment_from_host"), rs.getLong("bookings_booking_id")));
+            }
+            return reviews;
+        }
+    }
+
+    public List<Review> getReviews() {
+        SqlQuery query = new SqlQuery("SELECT * FROM reviews");
+        try {
+            return executeReviewQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all reviews", e);
         }
     }
 

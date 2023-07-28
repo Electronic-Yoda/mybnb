@@ -14,7 +14,7 @@ public class UserService {
         this.dao = dao;
     }
 
-    public void addUser(User user) {
+    public void addUser(User user) throws ServiceException{
         // check if user already exists
         if (!dao.userExists(user.sin())) {
             dao.insertUser(user);
@@ -28,7 +28,7 @@ public class UserService {
         }
     }
 
-    public void deleteUser(Long sin) {
+    public void deleteUser(Long sin) throws ServiceException{
         if (dao.userExists(sin)) {
             dao.deleteUser(sin);
             logger.info("User deleted successfully");

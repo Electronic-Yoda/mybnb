@@ -1,8 +1,12 @@
 package data;
 
+import domain.Availability;
+import domain.Listing;
 import domain.User;
+import filter.ListingFilter;
 import filter.UserFilter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -11,28 +15,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DaoTest {
 
-    @org.junit.jupiter.api.Test
-    void tableTest() {
-        Dao dao = new Dao();
-        dao.dropTables();
-        List<String> tables = dao.getOriginalTables();
-        dao.createTables();
-        List<String> tablesRetrieved = dao.getTables();
-        Collections.sort(tables);
-        System.out.println(tables);
-        System.out.println(tablesRetrieved);
-        Collections.sort(tablesRetrieved);
-        assertTrue(tables.equals(tablesRetrieved));
-        dao.dropTables();
-        tablesRetrieved = dao.getTables();
-        assertTrue(tablesRetrieved.isEmpty());
-    }
 
     @org.junit.jupiter.api.Test
     void userTest() {
+        System.out.println("\nuserTest");
         Dao dao = new Dao();
-        dao.dropTables();
-        dao.createTables();
+        DbConfig dbConfig = new DbConfig();
+        dbConfig.resetTables();
         assertTrue(dao.getUsers().isEmpty());
 
         User user = new User(
@@ -49,14 +38,15 @@ class DaoTest {
         assertTrue(user.equals(userRetrieved));
         dao.deleteUser(123456789L);
         assertTrue(dao.getUsers().isEmpty());
-        dao.dropTables();
     }
 
     @org.junit.jupiter.api.Test
     void userFilterTest() {
+        System.out.println("\nuserFilterTest");
         Dao dao = new Dao();
-        dao.dropTables();
-        dao.createTables();
+        DbConfig dbConfig = new DbConfig();
+        dbConfig.resetTables();
+
         assertTrue(dao.getUsers().isEmpty());
 
         User user1 = new User(
@@ -70,7 +60,7 @@ class DaoTest {
         User user2 = new User(
                 2L,
                 "John Doe",
-                "12 College St. Toronto, ON",
+                null, // can be null (for user privacy)
                 LocalDate.parse("1976-01-09"),
                 "Doctor"
         );
@@ -79,11 +69,13 @@ class DaoTest {
         assertTrue(dao.getUsers().size() == 2);
         List<User> usersRetrieved = dao.getUsersByFilter(
                 new UserFilter(
-                        1L,
-                        null,
-                        null,
-                        null,
-                        null
+                    new User(
+                            1L,
+                            null,
+                            null,
+                            null,
+                            null
+                    )
                 )
         );
         assertTrue(usersRetrieved.size() == 1);
@@ -91,11 +83,13 @@ class DaoTest {
 
         usersRetrieved = dao.getUsersByFilter(
                 new UserFilter(
-                        null,
-                        "John Doe",
-                        null,
-                        null,
-                        null
+                        new User(
+                                null,
+                                "John Doe",
+                                null,
+                                null,
+                                null
+                        )
                 )
         );
         assertTrue(usersRetrieved.size() == 2);
@@ -107,22 +101,241 @@ class DaoTest {
 
     @org.junit.jupiter.api.Test
     void listingBasicTest() {
-//        Dao dao = new Dao();
-//        dao.dropTables();
-//        dao.createTables();
-//        assertTrue(dao.getListings().isEmpty());
-//        dao.dropTables();
+        System.out.println("\nlistingBasicTest");
+        Dao dao = new Dao();
+        DbConfig dbConfig = new DbConfig();
+        dbConfig.resetTables();
+
+        User user = new User(
+                123456789L,
+                "John Doe",
+                "32 Main St. Toronto, ON",
+                LocalDate.parse("2001-03-12"),
+                "Student"
+        );
+        dao.insertUser(user);
+
+        Listing listing = new Listing(
+                null,
+                "house",
+                new BigDecimal(100),
+                "123 Main St.",
+                "M5S 1A1",
+                new BigDecimal(43.66),
+                new BigDecimal(79.40),
+                "Toronto",
+                "Canada",
+                123456789L
+        );
+        dao.insertListing(listing);
+        assertTrue(dao.listingExists(listing));
+        List<Listing> retrievedListings = dao.getListings();
+        assertTrue(retrievedListings.size() == 1);
+        System.out.println(retrievedListings.get(0));
+        dao.deleteListing(retrievedListings.get(0).listing_id());
+        assertFalse(dao.listingExists(retrievedListings.get(0)));
     }
 
     @org.junit.jupiter.api.Test
-    void insertListing() {
-    }
+    void listingTest() {
+        System.out.println("\nlistingTest");
+        Dao dao = new Dao();
+        DbConfig dbConfig = new DbConfig();
+        dbConfig.resetTables();
 
-    @org.junit.jupiter.api.Test
-    void listingExists() {
-    }
+        User user = new User(
+                1L,
+                "John Doe",
+                "32 Main St. Toronto, ON",
+                LocalDate.parse("2001-03-12"),
+                "Student"
+        );
+        dao.insertUser(user);
 
-    @org.junit.jupiter.api.Test
-    void getAmenities() {
+        // let user have 2 listings
+        Listing listing1 = new Listing(
+                null,
+                "house",
+                new BigDecimal("100.00"),
+                "123 Main St.",
+                "M5S 1A1",
+                new BigDecimal("43.66"),
+                new BigDecimal("79.40"),
+                "Toronto",
+                "Canada",
+                user.sin()
+        );
+        Long listing_id1 = dao.insertListing(listing1);
+
+        Listing listing2 = new Listing(
+                null,
+                "condo",
+                new BigDecimal("50"),
+                "111 Main St.",
+                "M5T 1C1",
+                new BigDecimal("42.11"),
+                new BigDecimal("79.40"),
+                "Toronto",
+                "Canada",
+                user.sin()
+        );
+        Long listing_id2 = dao.insertListing(listing2);
+
+        assertTrue(dao.listingExists(listing1));
+        assertTrue(dao.listingExists(listing2));
+
+        assertTrue(dao.getListingByLocation(
+                listing1.postal_code(),
+                listing1.city(),
+                listing1.country()
+        ).listing_id().equals(listing_id1));
+
+        assertTrue(dao.getListingByLocation(
+                listing2.postal_code(),
+                listing2.city(),
+                listing2.country()
+        ).listing_id().equals(listing_id2));
+
+        Availability listing1Availability1 = new Availability(
+                null,
+                LocalDate.parse("2021-03-12"),
+                LocalDate.parse("2021-03-15"),
+                listing_id1
+        );
+        dao.insertAvailability(listing1Availability1);
+
+        Availability listing1Availability2 = new Availability(
+                null,
+                LocalDate.parse("2021-03-20"),
+                LocalDate.parse("2021-03-25"),
+                listing_id1
+        );
+        dao.insertAvailability(listing1Availability2);
+
+        Availability listing2Availability1 = new Availability(
+                null,
+                LocalDate.parse("2021-03-12"),
+                LocalDate.parse("2021-03-15"),
+                listing_id2
+        );
+        dao.insertAvailability(listing2Availability1);
+
+        Availability listing2Availability2 = new Availability(
+                null,
+                LocalDate.parse("2021-03-15"),
+                LocalDate.parse("2021-03-17"),
+                listing_id2
+        );
+        dao.insertAvailability(listing2Availability2);
+
+        // check if all availabilities were inserted
+        assertTrue(dao.getAvailabilities().size() == 4);
+
+        // insert amenities
+        dao.insertAmenityForListing(listing_id1, "wifi");
+        dao.insertAmenityForListing(listing_id1, "tv");
+
+        dao.insertAmenityForListing(listing_id2, "wifi");
+        dao.insertAmenityForListing(listing_id2, "kitchen");
+
+        List<String> amenities1 = dao.getAmenitiesByListingId(listing_id1);
+        List<String> amenities2 = dao.getAmenitiesByListingId(listing_id2);
+        assertTrue(amenities1.size() == 2);
+        assertTrue(amenities2.size() == 2);
+
+        dao.getUsers().forEach(System.out::println);
+        dao.getListings().forEach(System.out::println);
+        dao.getAvailabilities().forEach(System.out::println);
+        System.out.println("Amenities for listing 1:");
+        System.out.println(amenities1);
+        System.out.println("Amenities for listing 2:");
+        System.out.println(amenities2);
+        System.out.println();
+
+        // use filter to get listings with availability between 2021-03-12 and 2021-03-15
+        List<Listing> listingsRetrieved = dao.getListingsByFilter(
+                new ListingFilter(
+                        null,
+                        new Availability(
+                                null,
+                                LocalDate.parse("2021-03-12"),
+                                LocalDate.parse("2021-03-15"),
+                                null
+                        ),
+                        null
+                )
+        );
+        assertTrue(listingsRetrieved.size() == 2);
+        System.out.println("Listings retrieved with availability between 2021-03-12 and 2021-03-15:");
+        listingsRetrieved.forEach(System.out::println);
+
+        // use filter to get listings with amenities wifi
+        listingsRetrieved = dao.getListingsByFilter(
+                new ListingFilter(
+                        null,
+                        null,
+                        Collections.singletonList("wifi")
+                )
+        );
+        assertTrue(listingsRetrieved.size() == 2);
+        System.out.println("Listings retrieved by filtering with wifi:");
+        listingsRetrieved.forEach(System.out::println);
+
+        // use filter to get listings with amenities wifi and tv
+        listingsRetrieved = dao.getListingsByFilter(
+                new ListingFilter(
+                        null,
+                        null,
+                        List.of("wifi", "tv")
+                )
+        );
+        assertTrue(listingsRetrieved.size() == 1);
+        System.out.println("Listings retrieved by filtering with wifi and tv:");
+        listingsRetrieved.forEach(System.out::println);
+
+        // use filter to get listings with amenities backyard
+        listingsRetrieved = dao.getListingsByFilter(
+                new ListingFilter(
+                        null,
+                        null,
+                        Collections.singletonList("backyard")
+                )
+        );
+        assertTrue(listingsRetrieved.isEmpty());
+
+        // use filter to get listings with wifi and is a house
+        listingsRetrieved = dao.getListingsByFilter(
+                new ListingFilter(
+                        new Listing(
+                                null,
+                                "house",
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        null,
+                        Collections.singletonList("wifi")
+                )
+        );
+        assertTrue(listingsRetrieved.size() == 1);
+        System.out.println("Listings retrieved by filtering with wifi and is a house:");
+        listingsRetrieved.forEach(System.out::println);
+
+        // Test Cascade delete. If a listing is deleted, all its availabilities and amenities should be deleted
+        dao.deleteListing(listing_id1);
+        assertTrue(dao.getAvailabilities().size() == 2);
+        assertTrue(dao.getAmenitiesByListingId(listing_id1).isEmpty());
+        assertTrue(dao.getAmenitiesByListingId(listing_id2).size() == 2);
+        assertTrue(dao.getListingByLocation(
+                listing1.postal_code(),
+                listing1.city(),
+                listing1.country()
+        ) == null);
+
     }
 }
