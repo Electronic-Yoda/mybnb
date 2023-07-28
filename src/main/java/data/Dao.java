@@ -476,14 +476,14 @@ public class Dao {
         }
     }
 
-    // public List<Availability> getAvailabilities() {
-    //     SqlQuery query = new SqlQuery("SELECT * FROM availabilities");
-    //     try {
-    //         return executeAvailabilityQuery(query);
-    //     } catch (SQLException e) {
-    //         throw new DataAccessException("Error getting all availabilities", e);
-    //     }
-    // }
+    public List<Availability> getAvailabilities() {
+        SqlQuery query = new SqlQuery("SELECT * FROM availabilities");
+        try {
+            return executeAvailabilityQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all availabilities", e);
+        }
+    }
 
     public Availability getAvailability(long listingId, LocalDate startDate, LocalDate endDate) throws Exception {
         SqlQuery query = new SqlQuery(
