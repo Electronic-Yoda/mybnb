@@ -8,11 +8,13 @@ import filter.UserFilter;
 
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.time.temporal.ChronoUnit;
 
 public class Dao {
     private final String url;
@@ -230,10 +232,19 @@ public class Dao {
         }
     }
 
-    public boolean listingIdExists(long listingId) {
+    public boolean listingIdExists(Long listingId) {
         SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listingId);
         try {
             return !executeListingQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if listing_id exists", e);
+        }
+    }
+
+    public Listing getListingById(Long listingId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listingId);
+        try {
+            return executeListingQuery(query).get(0);
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if listing_id exists", e);
         }
@@ -348,8 +359,6 @@ public class Dao {
         }
     }
 
-
-
     public Date getCurrentDate() {
         SqlQuery query = new SqlQuery("SELECT CURRENT_DATE()");
 
@@ -399,8 +408,7 @@ public class Dao {
             while (rs.next()) {
                 bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(),
                         rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
-                        rs.getBigDecimal("amount"), rs.getString("currency"),
-                        rs.getString("payment_method"), rs.getLong("users_sin"),
+                        rs.getBigDecimal("amount"), rs.getString("payment_method"), rs.getLong("clients_sin"),
                         rs.getLong("listings_listing_id")));
             }
             return bookings;
@@ -423,7 +431,6 @@ public class Dao {
             throw new DataAccessException("Error updating existing listing price", e);
         }
     }
-
 
     public Long insertAvailability(Availability availability) {
         try {
@@ -469,22 +476,36 @@ public class Dao {
         }
     }
 
-    public List<Availability> getAvailabilities() {
-        SqlQuery query = new SqlQuery("SELECT * FROM availabilities");
-        try {
-            return executeAvailabilityQuery(query);
-        } catch (SQLException e) {
-            throw new DataAccessException("Error getting all availabilities", e);
-        }
-    }
+    // public List<Availability> getAvailabilities() {
+    //     SqlQuery query = new SqlQuery("SELECT * FROM availabilities");
+    //     try {
+    //         return executeAvailabilityQuery(query);
+    //     } catch (SQLException e) {
+    //         throw new DataAccessException("Error getting all availabilities", e);
+    //     }
+    // }
 
-    public boolean listingAvailabilityExists(long listingId, LocalDate startDate, LocalDate endDate) {
+    public Availability getAvailability(long listingId, LocalDate startDate, LocalDate endDate) throws Exception {
         SqlQuery query = new SqlQuery(
-                "SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?");
+                "SELECT * FROM availabilities WHERE listings_listing_id = ?", listingId);
+
         try {
-            return !executeAvailabilityQuery(query).isEmpty();
+            List<Availability> availabilities = executeAvailabilityQuery(query);
+
+            for (int i = 0; i < availabilities.size(); i++) {
+                // Check if startDate and endDate is within range
+                LocalDate availableStartDate = availabilities.get(i).start_date();
+                LocalDate availableEndDate = availabilities.get(i).end_date();
+
+                // !isAfter === isEqual and isBefore
+                if (!availableStartDate.isAfter(startDate) && !availableEndDate.isBefore(endDate)) {
+                    return  availabilities.get(i);
+                }
+            }
+            // TODO make custom exception
+            throw new Exception(String.format("No availiability between %tF to %tF", startDate, endDate));
         } catch (SQLException e) {
-            throw new DataAccessException("Error getting all availabilities", e);
+            throw new DataAccessException("Error getting availabilities.", e);
         }
     }
 
@@ -500,7 +521,6 @@ public class Dao {
         }
     }
 
-
     public void insertAmenityForListing(long listingId, String amenityName) {
         SqlQuery query = new SqlQuery("INSERT INTO listing_amenities (listing_id, amenity_id) " +
                 "VALUES (?, (SELECT amenity_id FROM amenities WHERE amenity_name = ?))", listingId, amenityName);
@@ -511,13 +531,53 @@ public class Dao {
         }
     }
 
-    public Long insertBooking(Booking booking) {
+    public void addBooking(Long listingId, LocalDate startDate, LocalDate endDate, String payment_method, Long tenantSin) throws Exception {
       try {
-              return executeStatement(getInsertStatement(booking, "bookings"));
+            Availability availability = getAvailability(listingId, startDate, endDate);
+            LocalDate availableStartDate = availability.start_date();
+            LocalDate availableEndDate = availability.end_date();
+
+            // Delete existing availabilty
+            deleteAvailability(listingId, availableStartDate, availableEndDate);
+
+            // Case 1: Booking is in between availability range
+            if (availableStartDate.isAfter(startDate) && availableEndDate.isBefore(endDate)) {
+                insertAvailability(new Availability(null, availableStartDate, startDate, listingId));
+                insertAvailability(new Availability(null, endDate, availableEndDate, listingId));
+            }
+
+            // Case 2: Booking is in the first half of availabilty range
+            else if (availableStartDate.isEqual(startDate) && availableEndDate.isAfter(endDate)) {
+                insertAvailability(new Availability(null, endDate, availableEndDate, listingId));
+            }
+
+            // Case 3: Booking is in last half of availabilty range
+            else if (availableStartDate.isBefore(startDate) && availableEndDate.isEqual(endDate)) {
+                insertAvailability(new Availability(null, availableStartDate, startDate, listingId));
+            }
+
+            // Case 4: Booking date range exactly matches to availabilty date range
+            // No need to create new availability
+
+            Listing listing = getListingById(listingId);
+            BigDecimal amount = listing.price_per_night().multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(startDate, endDate)), new MathContext(2));
+
+            // Insert booking
+            Booking booking = new Booking(null, startDate, endDate, getCurrentDate().toLocalDate(), amount, payment_method, tenantSin, listingId);
+            insertBooking(booking);
+
           } catch (SQLException e) {
-              throw new DataAccessException("Error inserting booking", e);
+              throw new DataAccessException("Error add booking", e);
           }
       }
+
+    public Long insertBooking(Booking booking) {
+        try {
+            return executeStatement(getInsertStatement(booking, "bookings"));
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting availability", e);
+        }
+    }
 
     public void deleteBooking(long bookingId) {
         SqlQuery query = new SqlQuery("DELETE FROM bookings WHERE booking_id = ?", bookingId);

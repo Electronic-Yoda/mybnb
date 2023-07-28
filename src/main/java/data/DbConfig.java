@@ -89,9 +89,8 @@ public class DbConfig {
                     "end_date date  NOT NULL," +
                     "transaction_date date  NOT NULL," +
                     "amount decimal(10,2)  NOT NULL," +
-                    "currency varchar(3)  NOT NULL," +
                     "payment_method varchar(20)  NOT NULL," +
-                    "users_sin BIGINT  NOT NULL," +
+                    "tenant_sin BIGINT  NOT NULL," +
                     "listings_listing_id BIGINT UNSIGNED NOT NULL," +
                     "PRIMARY KEY (booking_id)" +
                     ");";
