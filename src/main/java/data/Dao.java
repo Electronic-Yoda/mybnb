@@ -433,8 +433,18 @@ public class Dao {
         }
     }
 
-    public void deleteAvailability(long availabilityId) {
-        SqlQuery query = new SqlQuery("DELETE FROM availabilities WHERE availability_id = ?", availabilityId);
+    public void deleteAvailability(Long availability_id) {
+        SqlQuery query = new SqlQuery("DELETE FROM availabilities WHERE availability_id = ?", availability_id);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting availability", e);
+        }
+    }
+
+    public void deleteAvailability(Long listingId, LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery("DELETE FROM availabilities WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
+                listingId, startDate, endDate);
         try {
             executeStatement(query);
         } catch (SQLException e) {

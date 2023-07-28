@@ -328,6 +328,7 @@ class DaoTest {
 
         // Test Cascade delete. If a listing is deleted, all its availabilities and amenities should be deleted
         dao.deleteListing(listing_id1);
+        assertTrue(dao.getListings().size() == 1);
         assertTrue(dao.getAvailabilities().size() == 2);
         assertTrue(dao.getAmenitiesByListingId(listing_id1).isEmpty());
         assertTrue(dao.getAmenitiesByListingId(listing_id2).size() == 2);
@@ -337,5 +338,14 @@ class DaoTest {
                 listing1.country()
         ) == null);
 
+        System.out.println(dao.getAvailabilities());
+        // Test delete availability
+        dao.deleteAvailability(listing_id2, listing2Availability1.start_date(), listing2Availability1.end_date());
+        System.out.println(dao.getAvailabilities());
+
+        assertTrue(dao.getAvailabilities().size() == 1);
+        System.out.println("Availabilities: " +  dao.getAvailabilities());
+
+        dbConfig.resetTables();
     }
 }
