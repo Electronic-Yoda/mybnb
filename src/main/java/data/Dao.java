@@ -340,8 +340,13 @@ public class Dao {
         SqlQuery query = new SqlQuery(
                 "UPDATE availabilities SET start_date = ?, end_date = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
                 newStartDate, newEndDate, listingId, prevStartDate, prevEndDate);
-        try {
-            executeStatement(query);
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            stmt.executeQuery();
+
         } catch (SQLException e) {
             throw new DataAccessException("Error updating listing availabilities.", e);
         }
