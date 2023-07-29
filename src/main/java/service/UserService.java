@@ -16,6 +16,7 @@ public class UserService {
 
     public void addUser(User user) throws ServiceException{
         try {
+            dao.startTransaction();  // Begin transaction
             if (dao.userExists(user.sin())) {
                 throw new ServiceException(
                         String.format(
@@ -23,7 +24,6 @@ public class UserService {
                         )
                 );
             }
-            dao.startTransaction();  // Begin transaction
             dao.insertUser(user);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
         } catch (Exception e) {
@@ -34,6 +34,7 @@ public class UserService {
 
     public void deleteUser(Long sin) throws ServiceException{
         try {
+            dao.startTransaction();  // Begin transaction
             if (!dao.userExists(sin)) {
                 throw new ServiceException(
                         String.format(
@@ -41,7 +42,6 @@ public class UserService {
                         )
                 );
             }
-            dao.startTransaction();  // Begin transaction
             dao.deleteUser(sin);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
         } catch (Exception e) {
