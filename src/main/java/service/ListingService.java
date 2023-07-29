@@ -20,13 +20,13 @@ public class ListingService {
 
     public void addListing(Listing listing) throws ServiceException {
         try {
+            dao.startTransaction();  // Begin transaction
             if (dao.listingExists(listing)) {
                 throw new ServiceException(
                         String.format(
                                 "Unable to add listing because listing at %s, %s. %s already exists",
                                 listing.country(), listing.city(), listing.postal_code()));
             }
-            dao.startTransaction();  // Begin transaction
             dao.insertListing(listing);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
         } catch (Exception e) {
@@ -37,6 +37,7 @@ public class ListingService {
 
     public void deleteListing(long listingId) throws ServiceException {
         try {
+            dao.startTransaction();  // Begin transaction
             if (!dao.listingIdExists(listingId)) {
                 throw new ServiceException(
                         String.format("Unable to delete listing because listing with id, %d, doesn't exist", listingId));
@@ -45,7 +46,6 @@ public class ListingService {
                 throw new ServiceException(
                         String.format("Unable to delete listing because there are future bookings."));
             }
-            dao.startTransaction();  // Begin transaction
             dao.deleteListing(listingId);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
         } catch (Exception e) {
@@ -58,6 +58,7 @@ public class ListingService {
 
     public void updateListingPrice(long listingId, BigDecimal newPrice) throws ServiceException {
         try {
+            dao.startTransaction();
             // compareTo returns -1 if newPrice < 0
             // TODO double check requirements
             if (newPrice.compareTo(BigDecimal.ZERO) < 0) {
@@ -71,7 +72,6 @@ public class ListingService {
                                 "Unable to add listing because listing with id, %d, doesnt exists",
                                 listingId));
             }
-            dao.startTransaction();
             dao.updateListingPrice(listingId, newPrice);
             dao.commitTransaction();
         } catch (Exception e) {
