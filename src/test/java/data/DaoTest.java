@@ -22,6 +22,8 @@ class DaoTest {
         Dao dao = new Dao();
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
+
+        dao.startTransaction();
         assertTrue(dao.getUsers().isEmpty());
 
         User user = new User(
@@ -32,12 +34,12 @@ class DaoTest {
                 "Student"
         );
         dao.insertUser(user);
-
         User userRetrieved = dao.getUsers().get(0);
         assertTrue(dao.getUsers().size() == 1);
         assertTrue(user.equals(userRetrieved));
         dao.deleteUser(123456789L);
         assertTrue(dao.getUsers().isEmpty());
+        dao.commitTransaction();
     }
 
     @org.junit.jupiter.api.Test
@@ -46,7 +48,7 @@ class DaoTest {
         Dao dao = new Dao();
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
-
+        dao.startTransaction();
         assertTrue(dao.getUsers().isEmpty());
 
         User user1 = new User(
@@ -97,6 +99,7 @@ class DaoTest {
             assertTrue(user.name().equals("John Doe"));
             System.out.println(user);
         }
+        dao.commitTransaction();
     }
 
     @org.junit.jupiter.api.Test
@@ -105,7 +108,7 @@ class DaoTest {
         Dao dao = new Dao();
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
-
+        dao.startTransaction();
         User user = new User(
                 123456789L,
                 "John Doe",
@@ -134,6 +137,7 @@ class DaoTest {
         System.out.println(retrievedListings.get(0));
         dao.deleteListing(retrievedListings.get(0).listing_id());
         assertFalse(dao.listingExists(retrievedListings.get(0)));
+        dao.commitTransaction();
     }
 
     @org.junit.jupiter.api.Test
@@ -142,6 +146,8 @@ class DaoTest {
         Dao dao = new Dao();
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
+
+        dao.startTransaction();
 
         User user = new User(
                 1L,
@@ -328,6 +334,7 @@ class DaoTest {
 
         // Test Cascade delete. If a listing is deleted, all its availabilities and amenities should be deleted
         dao.deleteListing(listing_id1);
+        assertTrue(dao.getListings().size() == 1);
         assertTrue(dao.getAvailabilities().size() == 2);
         assertTrue(dao.getAmenitiesByListingId(listing_id1).isEmpty());
         assertTrue(dao.getAmenitiesByListingId(listing_id2).size() == 2);
@@ -337,5 +344,16 @@ class DaoTest {
                 listing1.country()
         ) == null);
 
+        System.out.println(dao.getAvailabilities());
+        // Test delete availability
+        dao.deleteAvailability(listing_id2, listing2Availability1.start_date(), listing2Availability1.end_date());
+        System.out.println(dao.getAvailabilities());
+
+        assertTrue(dao.getAvailabilities().size() == 1);
+        System.out.println("Availabilities: " +  dao.getAvailabilities());
+
+        dao.commitTransaction();
+
+        dbConfig.resetTables();
     }
 }

@@ -1,4 +1,4 @@
-# mybnb-database
+# service-database
 
 Running mysql using docker.
 
