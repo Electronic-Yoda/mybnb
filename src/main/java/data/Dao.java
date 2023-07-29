@@ -17,7 +17,8 @@ public class Dao {
     private final String url;
     private final String username;
     private final String password;
-
+    private static ThreadLocal<Connection> threadLocalConnection = new ThreadLocal<>();
+    
     public Dao(String url, String username, String password) {
         this.url = url;
         this.username = username;
@@ -31,12 +32,62 @@ public class Dao {
         this.password = "";
     }
 
+    public void startTransaction() {
+        try {
+            Connection conn = DriverManager.getConnection(url, username, password);
+            conn.setAutoCommit(false);
+            threadLocalConnection.set(conn);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error starting transaction", e);
+        }
+    }
+
+    public void commitTransaction() {
+        Connection conn = threadLocalConnection.get();
+        try {
+            if (conn != null && !conn.isClosed()) {
+                conn.commit();
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error committing transaction", e);
+        } finally {
+            closeConnection();
+        }
+    }
+
+
+    public void rollbackTransaction() {
+        Connection conn = threadLocalConnection.get();
+        try {
+            if (conn != null && !conn.isClosed()) {
+                conn.rollback();
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error rolling back transaction", e);
+        } finally {
+            closeConnection();
+        }
+    }
+
+    private void closeConnection() {
+        Connection conn = threadLocalConnection.get();
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (SQLException e) {
+                throw new DataAccessException("Error closing threadLocalConnection", e);
+            } finally {
+                threadLocalConnection.remove(); // clean up thread-local variable
+            }
+        }
+    }
+
 
     // if the query is an insert statement where the key is automatically inserted, return the generated id
     // otherwise, return null
     private Long executeStatement(SqlQuery query) throws SQLException {
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(query.sql(), Statement.RETURN_GENERATED_KEYS)) {
+        Connection conn = threadLocalConnection.get(); // Note: this is the thread-local connection! We close this at the end of the transaction
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql(), Statement.RETURN_GENERATED_KEYS)) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
@@ -50,7 +101,6 @@ public class Dao {
             }
         }
     }
-
 
     private SqlQuery getInsertStatement(Object domainObject, String tableName) {
         StringBuilder sql = new StringBuilder("INSERT INTO ");
@@ -106,8 +156,8 @@ public class Dao {
     }
 
     private List<User> executeUserQuery(SqlQuery query) throws SQLException {
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
@@ -178,8 +228,8 @@ public class Dao {
     }
 
     public List<Listing> executeListingQuery(SqlQuery query) throws SQLException {
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
@@ -343,8 +393,8 @@ public class Dao {
         SqlQuery query = new SqlQuery("SELECT amenity_name FROM amenities " +
                 "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
                 "WHERE listing_amenities.listing_id = ?", listing_id);
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             stmt.setObject(1, listing_id);
             ResultSet rs = stmt.executeQuery();
             List<String> amenities = new ArrayList<>();
@@ -359,9 +409,8 @@ public class Dao {
 
     public Date getCurrentDate() {
         SqlQuery query = new SqlQuery("SELECT CURRENT_DATE()");
-
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
 
             ResultSet rs = stmt.executeQuery();
             return rs.getDate(0);
@@ -373,8 +422,7 @@ public class Dao {
     public boolean hasFutureBookings(Long listing_id) {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ?", listing_id);
 
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+        try {
             List<Booking> bookings = executeBookingQuery(query);
 
             // There are no bookings for this listing
@@ -396,8 +444,8 @@ public class Dao {
     }
 
     public List<Booking> executeBookingQuery(SqlQuery query) throws SQLException {
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
@@ -416,6 +464,15 @@ public class Dao {
 
     public boolean bookingExists(Long booking_id) {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE booking_id = ?", booking_id);
+        try {
+            return !executeBookingQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if booking exists", e);
+        }
+    }
+
+    public boolean bookingExists(Long listing_id, LocalDate start_date, LocalDate end_date) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?", listing_id, start_date, end_date);
         try {
             return !executeBookingQuery(query).isEmpty();
         } catch (SQLException e) {
@@ -461,8 +518,8 @@ public class Dao {
     }
 
     private List<Availability> executeAvailabilityQuery(SqlQuery query) throws SQLException {
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
@@ -618,8 +675,8 @@ public class Dao {
     }
 
     private List<Review> executeReviewQuery(SqlQuery query) throws SQLException {
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }

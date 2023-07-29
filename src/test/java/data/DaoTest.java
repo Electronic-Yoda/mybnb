@@ -22,6 +22,8 @@ class DaoTest {
         Dao dao = new Dao();
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
+
+        dao.startTransaction();
         assertTrue(dao.getUsers().isEmpty());
 
         User user = new User(
@@ -32,12 +34,12 @@ class DaoTest {
                 "Student"
         );
         dao.insertUser(user);
-
         User userRetrieved = dao.getUsers().get(0);
         assertTrue(dao.getUsers().size() == 1);
         assertTrue(user.equals(userRetrieved));
         dao.deleteUser(123456789L);
         assertTrue(dao.getUsers().isEmpty());
+        dao.commitTransaction();
     }
 
     @org.junit.jupiter.api.Test
@@ -46,7 +48,7 @@ class DaoTest {
         Dao dao = new Dao();
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
-
+        dao.startTransaction();
         assertTrue(dao.getUsers().isEmpty());
 
         User user1 = new User(
@@ -97,6 +99,7 @@ class DaoTest {
             assertTrue(user.name().equals("John Doe"));
             System.out.println(user);
         }
+        dao.commitTransaction();
     }
 
     @org.junit.jupiter.api.Test
@@ -105,7 +108,7 @@ class DaoTest {
         Dao dao = new Dao();
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
-
+        dao.startTransaction();
         User user = new User(
                 123456789L,
                 "John Doe",
@@ -134,6 +137,7 @@ class DaoTest {
         System.out.println(retrievedListings.get(0));
         dao.deleteListing(retrievedListings.get(0).listing_id());
         assertFalse(dao.listingExists(retrievedListings.get(0)));
+        dao.commitTransaction();
     }
 
     @org.junit.jupiter.api.Test
@@ -142,6 +146,8 @@ class DaoTest {
         Dao dao = new Dao();
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
+
+        dao.startTransaction();
 
         User user = new User(
                 1L,
@@ -345,6 +351,8 @@ class DaoTest {
 
         assertTrue(dao.getAvailabilities().size() == 1);
         System.out.println("Availabilities: " +  dao.getAvailabilities());
+
+        dao.commitTransaction();
 
         dbConfig.resetTables();
     }
