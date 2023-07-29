@@ -86,6 +86,7 @@ public class BookingService {
 
     public void cancelBooking(Long booking_id, Long tenant_sin) throws ServiceException {
         try {
+            dao.startTransaction();
             // check if booking exists
             if (!dao.bookingExists(booking_id)) {
                 throw new ServiceException(String.format("Booking with id, %d, does not exist.", booking_id));
