@@ -4,6 +4,7 @@ import data.Dao;
 import domain.Availability;
 import domain.Booking;
 import domain.Listing;
+import domain.Review;
 import exception.DataAccessException;
 import exception.ServiceException;
 
@@ -75,7 +76,13 @@ public class BookingService {
            Booking bookingToInsert = new Booking(null, booking.start_date(), booking.end_date(), LocalDate.now(),
                    amount, booking.payment_method(), booking.card_number(), booking.tenant_sin(), booking.listings_listing_id());
             // Insert booking
-            dao.insertBooking(bookingToInsert);
+            Long bookingId = dao.insertBooking(bookingToInsert);
+
+            // Create Review
+            Review review = new Review(null, -1, -1, -1, "", "", bookingId);
+
+            // TODO FIX Create Review Service
+            // ReviewService.addReview(review);
             dao.commitTransaction();
         } catch (Exception e) {
             dao.rollbackTransaction();
