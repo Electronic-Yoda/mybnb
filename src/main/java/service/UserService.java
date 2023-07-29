@@ -18,7 +18,6 @@ public class UserService {
         // check if user already exists
         if (!dao.userExists(user.sin())) {
             dao.insertUser(user);
-            logger.info("User added successfully");
         } else {
             throw new ServiceException(
                 String.format(
@@ -31,7 +30,6 @@ public class UserService {
     public void deleteUser(Long sin) throws ServiceException{
         if (dao.userExists(sin)) {
             dao.deleteUser(sin);
-            logger.info("User deleted successfully");
         } else {
             throw new ServiceException(
                 String.format(
