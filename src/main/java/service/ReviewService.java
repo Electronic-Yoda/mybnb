@@ -57,6 +57,17 @@ public class ReviewService {
         dao.commitTransaction();
     }
 
+    public void deleteTenantRateListing(Long tenant_id, Long booking_id) throws ServiceException {
+        dao.startTransaction();
+
+        // Check tenant_id matches in booking
+        if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+            throw new ServiceException("Tenant does not match with booking");
+
+        dao.tenantRateListing(tenant_id, -1, booking_id);
+        dao.commitTransaction();
+    }
+
     public void tenantRateHost(Long tenant_id, Integer rating, Long booking_id) throws ServiceException {
         dao.startTransaction();
 
@@ -72,6 +83,17 @@ public class ReviewService {
         dao.commitTransaction();
     }
 
+    public void deleteTenantRateHost(Long tenant_id, Long booking_id) throws ServiceException {
+        dao.startTransaction();
+
+        // Check tenant_id matches in booking
+        if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+            throw new ServiceException("Tenant does not match with booking");
+
+        dao.tenantRateHost(tenant_id, -1, booking_id);
+        dao.commitTransaction();
+    }
+
     public void tenantCommentsOnHost(Long tenant_id, String comment, Long booking_id) throws ServiceException {
         dao.startTransaction();
 
@@ -83,6 +105,17 @@ public class ReviewService {
             throw new ServiceException("Comment must be within 500 characters");
 
         dao.tenantCommentsOnHost(tenant_id, comment, booking_id);
+        dao.commitTransaction();
+    }
+
+    public void deleteTenantCommentsOnHost(Long tenant_id, Long booking_id) throws ServiceException {
+        dao.startTransaction();
+
+        // Check tenant_id matches in booking
+        if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+            throw new ServiceException("Tenant does not match with booking");
+
+        dao.tenantCommentsOnHost(tenant_id, "", booking_id);
         dao.commitTransaction();
     }
 
@@ -101,7 +134,18 @@ public class ReviewService {
         dao.commitTransaction();
     }
 
-    public void HostCommentsOnTenant(Long host_id, String comment, Long booking_id) throws ServiceException {
+    public void deleteHostRateTenant(Long host_id, Long booking_id) throws ServiceException {
+        dao.startTransaction();
+
+        // Check host_id matches in listing
+        if (!dao.hostSinMatchesBookingId(host_id, booking_id))
+            throw new ServiceException("Host does not match with booking");
+
+        dao.hostRateTenant(host_id, -1, booking_id);
+        dao.commitTransaction();
+    }
+
+    public void hostCommentsOnTenant(Long host_id, String comment, Long booking_id) throws ServiceException {
         dao.startTransaction();
 
         // Check host_id matches in listing
@@ -112,6 +156,17 @@ public class ReviewService {
             throw new ServiceException("Comment must be within 500 characters");
 
         dao.HostCommentsOnTenant(host_id, comment, booking_id);
+        dao.commitTransaction();
+    }
+
+    public void deleteHostCommentsOnTenant(Long host_id, Long booking_id) throws ServiceException {
+        dao.startTransaction();
+
+        // Check host_id matches in listing
+        if (!dao.hostSinMatchesBookingId(host_id, booking_id))
+            throw new ServiceException("Host does not match with booking");
+
+        dao.HostCommentsOnTenant(host_id, "", booking_id);
         dao.commitTransaction();
     }
 }
