@@ -374,8 +374,13 @@ public class Dao {
                 try {
                     Object value = component.getAccessor().invoke(filter.availability());
                     if (value != null) {
-                        sql.append(" AND " + component.getName() + " = ?");
-                        parameters.add(value);
+                        if (component.getName().equals("start_date")) {
+                            sql.append(" AND start_date >= ?");
+                            parameters.add(value);
+                        } else if (component.getName().equals("end_date")) {
+                            sql.append(" AND end_date <= ?");
+                            parameters.add(value);
+                        }
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -497,6 +502,33 @@ public class Dao {
             return !executeBookingQuery(query).isEmpty();
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if booking exists", e);
+        }
+    }
+
+    public void insertCancelledBooking(CancelledBooking cancelledBooking) {
+        try {
+            executeStatement(getInsertStatement(cancelledBooking, "cancelled_bookings"));
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting cancelled booking", e);
+        }
+    }
+
+    public List<CancelledBooking> executeCancelledBookingQuery(SqlQuery query) throws SQLException {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<CancelledBooking> cancelledBookings = new ArrayList<>();
+            while (rs.next()) {
+                cancelledBookings.add(new CancelledBooking(rs.getLong("cancelled_booking_id"), rs.getDate("start_date").toLocalDate(),
+                        rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
+                        rs.getBigDecimal("amount"), rs.getString("payment_method"),
+                        rs.getLong("card_number"), rs.getLong("clients_sin"),
+                        rs.getLong("listings_listing_id")));
+            }
+            return cancelledBookings;
         }
     }
 
@@ -805,7 +837,7 @@ public class Dao {
         }
     }
 
-    public void HostCommentsOnTenant(Long host_id, String comment, Long booking_id) {
+    public void hostCommentsOnTenant(Long host_id, String comment, Long booking_id) {
         SqlQuery query = new SqlQuery("UPDATE reviews SET comment_from_host = ? WHERE bookings_booking_id = ?", comment, booking_id);
         try {
             executeStatement(query);

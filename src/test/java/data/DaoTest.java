@@ -265,14 +265,14 @@ class DaoTest {
                         new Availability(
                                 null,
                                 LocalDate.parse("2021-03-12"),
-                                LocalDate.parse("2021-03-15"),
+                                LocalDate.parse("2021-03-16"),
                                 null
                         ),
                         null
                 )
         );
         assertTrue(listingsRetrieved.size() == 2);
-        System.out.println("Listings retrieved with availability between 2021-03-12 and 2021-03-15:");
+        System.out.println("Listings retrieved with availability between 2021-03-12 and 2021-03-16:");
         listingsRetrieved.forEach(System.out::println);
 
         // use filter to get listings with amenities wifi

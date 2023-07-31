@@ -18,6 +18,7 @@ public class DbConfig {
             "availabilities",
             "reviews",
             "bookings",
+            "cancelled_bookings",
             "listings",
             "users");
 
@@ -99,6 +100,23 @@ public class DbConfig {
             stmt.executeUpdate();
             stmt.close();
 
+            // cancelled bookings table
+            createTableSql = "CREATE TABLE cancelled_bookings (" +
+                    "cancelled_booking_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
+                    "start_date date  NOT NULL," +
+                    "end_date date  NOT NULL," +
+                    "transaction_date date  NOT NULL," +
+                    "amount decimal(10,2)  NOT NULL," +
+                    "payment_method varchar(20)  NOT NULL," +
+                    "card_number BIGINT NOT NULL," +
+                    "tenant_sin BIGINT  NOT NULL," +
+                    "listings_listing_id BIGINT UNSIGNED NOT NULL," +
+                    "PRIMARY KEY (cancelled_booking_id)" +
+                    ");";
+            stmt = conn.prepareStatement(createTableSql);
+            stmt.executeUpdate();
+            stmt.close();
+
             // reviews table
             createTableSql = "CREATE TABLE reviews (" +
                     "review_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
@@ -167,6 +185,11 @@ public class DbConfig {
             stmt.executeUpdate();
             stmt.close();
 
+            addForeignKeySql = "ALTER TABLE cancelled_bookings " +
+                    "ADD CONSTRAINT cancelled_bookings_users " +
+                    "FOREIGN KEY (tenant_sin) " +
+                    "REFERENCES users (sin);";
+
             addForeignKeySql = "ALTER TABLE reviews " +
                     "ADD CONSTRAINT reviews_bookings " +
                     "FOREIGN KEY (bookings_booking_id) " +
@@ -183,6 +206,11 @@ public class DbConfig {
             stmt = conn.prepareStatement(addForeignKeySql);
             stmt.executeUpdate();
             stmt.close();
+
+            addForeignKeySql = "ALTER TABLE cancelled_bookings " +
+                    "ADD CONSTRAINT cancelled_bookings_listings " +
+                    "FOREIGN KEY (listings_listing_id) " +
+                    "REFERENCES listings (listing_id);";
 
             addForeignKeySql = "ALTER TABLE listings " +
                     "ADD CONSTRAINT users_listings " +

@@ -1,10 +1,7 @@
 package service;
 
 import data.Dao;
-import domain.Availability;
-import domain.Booking;
-import domain.Listing;
-import domain.Review;
+import domain.*;
 import exception.DataAccessException;
 import exception.ServiceException;
 
@@ -79,10 +76,10 @@ public class BookingService {
             Long bookingId = dao.insertBooking(bookingToInsert);
 
             // Create Review
-            Review review = new Review(null, -1, -1, -1, "", "", bookingId);
 
-            // TODO FIX Create Review Service
-            // ReviewService.addReview(review);
+            // insert review with all null values
+            Review review = new Review(null, null, null, null, null, null, bookingId);
+            dao.insertReview(review);
             dao.commitTransaction();
         } catch (Exception e) {
             dao.rollbackTransaction();
@@ -90,8 +87,35 @@ public class BookingService {
         }
     }
 
+    public void hostCancelBooking(Long booking_id, Long host_sin) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.hostSinMatchesBookingId(host_sin, booking_id)) {
+                throw new ServiceException(String.format("Unable to cancel booking because host sin does not match. "));
+            }
+            dao.commitTransaction();
+            cancelBooking(booking_id);
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to cancel booking."), e);
+        }
+    }
 
-    public void cancelBooking(Long booking_id, Long tenant_sin) throws ServiceException {
+    public void tenantCancelBooking(Long booking_id, Long tenant_sin) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.tenantSinMatchesBookingId(tenant_sin, booking_id)) {
+                throw new ServiceException(String.format("Unable to cancel booking because tenant sin does not match. "));
+            }
+            dao.commitTransaction();
+            cancelBooking(booking_id);
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to cancel booking."), e);
+        }
+    }
+
+    private void cancelBooking(Long booking_id) throws ServiceException {
         try {
             dao.startTransaction();
             // check if booking exists
@@ -106,17 +130,16 @@ public class BookingService {
             } catch (DataAccessException e) {
                 throw new ServiceException(String.format("Unable to retrieve booking."), e);
             }
-            if (tenant_sin != booking.tenant_sin()) {
-                throw new ServiceException(String.format("Unable to cancel booking because tenant sin does not match. " +
-                        "Only tenants can cancel their booking. " +
-                        "Tenant sin: %d, Booking tenant sin: %d", tenant_sin, booking.tenant_sin()));
-            }
             if (booking.start_date().isBefore(LocalDate.now())) {
                 throw new ServiceException(String.format("Not allowed to cancel booking because booking has already started."));
             }
 
             // delete booking
             dao.deleteBooking(booking_id);
+
+            // insert cancelled booking
+            dao.insertCancelledBooking(new CancelledBooking(null, booking.start_date(), booking.end_date(), LocalDate.now(),
+                    booking.amount(), booking.payment_method(), booking.card_number(), booking.tenant_sin(), booking.listings_listing_id()));
 
             // re-insert availability
             LocalDate newAvailabilityStartDate = booking.start_date(); // To be reset if affectedAvailability exists
@@ -142,4 +165,193 @@ public class BookingService {
             throw new ServiceException(String.format("Unable to cancel booking."), e);
         }
     }
+
+
+    public void tenantRateListing(Long tenant_id, Integer rating, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check tenant_id matches in booking
+            if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+                throw new ServiceException("Tenant does not match with booking");
+
+            // Rating must be between 1 and 5 (inclusive)
+            if (rating < 1 || rating > 5)
+                throw new ServiceException("Rating must be and including 1 - 5");
+
+            dao.tenantRateListing(tenant_id, rating, booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to rate listing."), e);
+        }
+    }
+
+    public void deleteTenantRateListing(Long tenant_id, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check tenant_id matches in booking
+            if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+                throw new ServiceException("Tenant does not match with booking");
+
+            dao.tenantRateListing(tenant_id, null, booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to delete tenant rating for listing."), e);
+        }
+        dao.startTransaction();
+
+        // Check tenant_id matches in booking
+        if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+            throw new ServiceException("Tenant does not match with booking");
+
+        dao.tenantRateListing(tenant_id, -1, booking_id);
+        dao.commitTransaction();
+    }
+
+    public void tenantRateHost(Long tenant_id, Integer rating, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check tenant_id matches in booking
+            if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+                throw new ServiceException("Tenant does not match with booking");
+
+            // Rating must be between 1 and 5 (inclusive)
+            if (rating < 1 || rating > 5)
+                throw new ServiceException("Rating must be and including 1 - 5");
+
+            dao.tenantRateHost(tenant_id, rating, booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to rate host."), e);
+        }
+    }
+
+    public void deleteTenantRateHost(Long tenant_id, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check tenant_id matches in booking
+            if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+                throw new ServiceException("Tenant does not match with booking");
+
+            dao.tenantRateHost(tenant_id, null, booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to delete tenant rating for host."), e);
+        }
+    }
+
+    public void tenantCommentsOnHost(Long tenant_id, String comment, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check tenant_id matches in booking
+            if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+                throw new ServiceException("Tenant does not match with booking");
+
+            if (comment.length() > 500)
+                throw new ServiceException("Comment must be within 500 characters");
+
+            dao.tenantCommentsOnHost(tenant_id, comment, booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to comment on host."), e);
+        }
+    }
+
+    public void deleteTenantCommentsOnHost(Long tenant_id, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check tenant_id matches in booking
+            if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
+                throw new ServiceException("Tenant does not match with booking");
+
+            dao.tenantCommentsOnHost(tenant_id, "", booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to delete tenant comment on host."), e);
+        }
+    }
+
+    public void hostRateTenant(Long host_id, Integer rating, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check host_id matches in listing
+            if (!dao.hostSinMatchesBookingId(host_id, booking_id))
+                throw new ServiceException("Host does not match with booking");
+
+            // Rating must be between 1 and 5 (inclusive)
+            if (rating < 1 || rating > 5)
+                throw new ServiceException("Rating must be and including 1 - 5");
+
+            dao.hostRateTenant(host_id, rating, booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to rate tenant."), e);
+        }
+    }
+
+    public void deleteHostRateTenant(Long host_id, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check host_id matches in listing
+            if (!dao.hostSinMatchesBookingId(host_id, booking_id))
+                throw new ServiceException("Host does not match with booking");
+
+            dao.hostRateTenant(host_id, null, booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to delete host rating for tenant."), e);
+        }
+        dao.startTransaction();
+    }
+
+    public void hostCommentsOnTenant(Long host_id, String comment, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check host_id matches in listing
+            if (!dao.hostSinMatchesBookingId(host_id, booking_id))
+                throw new ServiceException("Host does not match with booking");
+
+            if (comment.length() > 500)
+                throw new ServiceException("Comment must be within 500 characters");
+
+            dao.hostCommentsOnTenant(host_id, comment, booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to comment on tenant."), e);
+        }
+    }
+
+    public void deleteHostCommentsOnTenant(Long host_id, Long booking_id) throws ServiceException {
+        try {
+            dao.startTransaction();
+
+            // Check host_id matches in listing
+            if (!dao.hostSinMatchesBookingId(host_id, booking_id))
+                throw new ServiceException("Host does not match with booking");
+
+            dao.hostCommentsOnTenant(host_id, "", booking_id);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to delete host comment on tenant."), e);
+        }
+    }
 }
+
