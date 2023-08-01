@@ -1,5 +1,7 @@
-package data;
+package service;
 
+import data.Dao;
+import data.DbConfig;
 import domain.*;
 import exception.ServiceException;
 import service.*;
