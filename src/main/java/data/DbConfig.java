@@ -58,6 +58,7 @@ public class DbConfig {
                     "availability_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
                     "start_date date  NOT NULL," +
                     "end_date date  NOT NULL," +
+                    "price_per_night decimal(10,2)  NOT NULL," +
                     "listings_listing_id BIGINT UNSIGNED NOT NULL," +
                     "PRIMARY KEY (availability_id)" +
                     ");";
@@ -69,7 +70,6 @@ public class DbConfig {
             createTableSql = "CREATE TABLE listings (" +
                     "listing_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
                     "listing_type char(10)  NOT NULL," +
-                    "price_per_night decimal(10,2)  NOT NULL," +
                     "address varchar(30)  NOT NULL," +
                     "postal_code varchar(12)  NOT NULL," +
                     "longitude decimal(9,6)  NOT NULL," +
@@ -122,8 +122,8 @@ public class DbConfig {
                     "review_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
                     "rating_of_listing int  NULL," +
                     "rating_of_host int  NULL," +
-                    "rating_of_renter int  NULL," +
-                    "comment_from_renter varchar(500)  NULL," +
+                    "rating_of_tenant int  NULL," +
+                    "comment_from_tenant varchar(500)  NULL," +
                     "comment_from_host varchar(500)  NULL," +
                     "bookings_booking_id BIGINT UNSIGNED NOT NULL UNIQUE," +
                     "PRIMARY KEY (review_id)" +

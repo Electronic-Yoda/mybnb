@@ -6,6 +6,8 @@ import exception.ServiceException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.List;
+
 public class UserService {
     private final Dao dao;
     private static final Logger logger = LogManager.getLogger(UserService.class);
@@ -47,6 +49,18 @@ public class UserService {
         } catch (Exception e) {
             dao.rollbackTransaction();  // Rollback transaction if any operation failed
             throw new ServiceException("An error occurred while trying to delete user", e);
+        }
+    }
+
+    public List<User> getUsers() throws ServiceException{
+        try {
+            dao.startTransaction();  // Begin transaction
+            List<User> users = dao.getUsers();
+            dao.commitTransaction();  // Commit transaction if all operations succeeded
+            return users;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occurred while trying to show users", e);
         }
     }
 }

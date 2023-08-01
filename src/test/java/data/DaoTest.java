@@ -121,7 +121,6 @@ class DaoTest {
         Listing listing = new Listing(
                 null,
                 "house",
-                new BigDecimal(100),
                 "123 Main St.",
                 "M5S 1A1",
                 new BigDecimal(43.66),
@@ -162,7 +161,6 @@ class DaoTest {
         Listing listing1 = new Listing(
                 null,
                 "house",
-                new BigDecimal("100.00"),
                 "123 Main St.",
                 "M5S 1A1",
                 new BigDecimal("43.66"),
@@ -176,7 +174,6 @@ class DaoTest {
         Listing listing2 = new Listing(
                 null,
                 "condo",
-                new BigDecimal("50"),
                 "111 Main St.",
                 "M5T 1C1",
                 new BigDecimal("42.11"),
@@ -206,6 +203,7 @@ class DaoTest {
                 null,
                 LocalDate.parse("2021-03-12"),
                 LocalDate.parse("2021-03-15"),
+                new BigDecimal("200.00"),
                 listing_id1
         );
         dao.insertAvailability(listing1Availability1);
@@ -214,6 +212,7 @@ class DaoTest {
                 null,
                 LocalDate.parse("2021-03-20"),
                 LocalDate.parse("2021-03-25"),
+                new BigDecimal("100.00"),
                 listing_id1
         );
         dao.insertAvailability(listing1Availability2);
@@ -222,6 +221,7 @@ class DaoTest {
                 null,
                 LocalDate.parse("2021-03-12"),
                 LocalDate.parse("2021-03-15"),
+                new BigDecimal("200.00"),
                 listing_id2
         );
         dao.insertAvailability(listing2Availability1);
@@ -230,6 +230,7 @@ class DaoTest {
                 null,
                 LocalDate.parse("2021-03-15"),
                 LocalDate.parse("2021-03-17"),
+                new BigDecimal("200.00"),
                 listing_id2
         );
         dao.insertAvailability(listing2Availability2);
@@ -266,6 +267,7 @@ class DaoTest {
                                 null,
                                 LocalDate.parse("2021-03-12"),
                                 LocalDate.parse("2021-03-16"),
+                                null,
                                 null
                         ),
                         null
@@ -315,7 +317,6 @@ class DaoTest {
                         new Listing(
                                 null,
                                 "house",
-                                null,
                                 null,
                                 null,
                                 null,
