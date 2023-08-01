@@ -237,8 +237,8 @@ public class Dao {
             List<Listing> listings = new ArrayList<>();
             while (rs.next()) {
                 listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"),
-                        rs.getBigDecimal("price_per_night"), rs.getString("address"),
-                        rs.getString("postal_code"), rs.getBigDecimal("longitude"), rs.getBigDecimal("latitude"),
+                        rs.getString("address"), rs.getString("postal_code"),
+                        rs.getBigDecimal("longitude"), rs.getBigDecimal("latitude"),
                         rs.getString("city"), rs.getString("country"),
                         rs.getLong("users_sin")));
             }
@@ -280,6 +280,16 @@ public class Dao {
         }
     }
 
+    public List<Listing> getListingsByHostSin(Long host_sin) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE users_sin = ?", host_sin);
+        try {
+            return executeListingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting listings from host id");
+        }
+
+    }
+
     public boolean listingIdExists(Long listing_id) {
         SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listing_id);
         try {
@@ -295,6 +305,16 @@ public class Dao {
             return executeListingQuery(query).get(0);
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if listing_id exists", e);
+        }
+    }
+
+    public boolean doesListingIdHaveHostSin(Long listing_id, Long host_sin) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ? AND users_sin = ?", listing_id, host_sin);
+
+        try {
+            return !executeListingQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking listing id matches with host sin", e);
         }
     }
 
@@ -354,7 +374,13 @@ public class Dao {
                 try {
                     Object value = component.getAccessor().invoke(filter.availability());
                     if (value != null) {
-                        sql.append(" AND " + component.getName() + " = ?");
+                        if (component.getName().equals("start_date")) {
+                            sql.append(" AND start_date >= ?");
+                        } else if (component.getName().equals("end_date")) {
+                            sql.append(" AND end_date <= ?");
+                        } else if (component.getName().equals("price_per_night")) {
+                            sql.append(" AND price_per_night <= ?");
+                        }
                         parameters.add(value);
                     }
                 } catch (Exception e) {
@@ -455,7 +481,7 @@ public class Dao {
                 bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(),
                         rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
                         rs.getBigDecimal("amount"), rs.getString("payment_method"),
-                        rs.getLong("card_number"), rs.getLong("clients_sin"),
+                        rs.getLong("card_number"), rs.getLong("tenant_sin"),
                         rs.getLong("listings_listing_id")));
             }
             return bookings;
@@ -477,6 +503,42 @@ public class Dao {
             return !executeBookingQuery(query).isEmpty();
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if booking exists", e);
+        }
+    }
+
+    public void insertCancelledBooking(CancelledBooking cancelledBooking) {
+        try {
+            executeStatement(getInsertStatement(cancelledBooking, "cancelled_bookings"));
+        } catch (SQLException e) {
+            throw new DataAccessException("Error inserting cancelled booking", e);
+        }
+    }
+
+    public List<CancelledBooking> executeCancelledBookingQuery(SqlQuery query) throws SQLException {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<CancelledBooking> cancelledBookings = new ArrayList<>();
+            while (rs.next()) {
+                cancelledBookings.add(new CancelledBooking(rs.getLong("cancelled_booking_id"), rs.getDate("start_date").toLocalDate(),
+                        rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
+                        rs.getBigDecimal("amount"), rs.getString("payment_method"),
+                        rs.getLong("card_number"), rs.getLong("tenant_sin"),
+                        rs.getLong("listings_listing_id")));
+            }
+            return cancelledBookings;
+        }
+    }
+
+    public List<CancelledBooking> getCancelledBookings() {
+        SqlQuery query = new SqlQuery("SELECT * FROM cancelled_bookings");
+        try {
+            return executeCancelledBookingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all cancelled bookings", e);
         }
     }
 
@@ -528,7 +590,7 @@ public class Dao {
             while (rs.next()) {
                 availabilities.add(new Availability(rs.getLong("availability_id"),
                         rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(),
-                        rs.getLong("listings_listing_id")));
+                        rs.getBigDecimal("price_per_night"), rs.getLong("listings_listing_id")));
             }
             return availabilities;
         }
@@ -543,9 +605,50 @@ public class Dao {
         }
     }
 
+    public List<Availability> getAvailabilitiesOfListing(Long listing_id) {
+        SqlQuery query = new SqlQuery("SELECT * FROM availabilities WHERE listings_listing_id = ?", listing_id);
+        try {
+            return executeAvailabilityQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting availabilities of listing", e);
+        }
+    }
+
     public Availability getAvailability(Long listing_id, LocalDate start_date, LocalDate end_date) {
         SqlQuery query = new SqlQuery(
                 "SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?", listing_id, start_date, end_date);
+
+        try {
+            List<Availability> availabilities = executeAvailabilityQuery(query);
+            if (availabilities.isEmpty()) {
+                return null;
+            } else {
+                return availabilities.get(0);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting availabilities.", e);
+        }
+    }
+
+    public Availability getAvailabilityByListingAndEndDate(Long listing_id, LocalDate end_date) {
+        SqlQuery query = new SqlQuery(
+                "SELECT * FROM availabilities WHERE listings_listing_id = ? AND end_date = ?", listing_id, end_date);
+
+        try {
+            List<Availability> availabilities = executeAvailabilityQuery(query);
+            if (availabilities.isEmpty()) {
+                return null;
+            } else {
+                return availabilities.get(0);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting availabilities.", e);
+        }
+    }
+
+    public Availability getAvailabilityByListingAndStartDate(Long listing_id, LocalDate start_date) {
+        SqlQuery query = new SqlQuery(
+                "SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date = ?", listing_id, start_date);
 
         try {
             List<Availability> availabilities = executeAvailabilityQuery(query);
@@ -588,7 +691,7 @@ public class Dao {
                 "SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?", listing_id, start_date, end_date);
 
         try {
-            return executeAvailabilityQuery(query).isEmpty();
+            return !executeAvailabilityQuery(query).isEmpty();
         } catch (SQLException e) {
             throw new DataAccessException("Error getting availabilities.", e);
         }
@@ -621,7 +724,7 @@ public class Dao {
         try {
             return executeStatement(getInsertStatement(booking, "bookings"));
         } catch (SQLException e) {
-            throw new DataAccessException("Error inserting availability", e);
+            throw new DataAccessException("Error inserting booking", e);
         }
     }
 
@@ -657,6 +760,54 @@ public class Dao {
         }
     }
 
+    public List<Booking> getBookingsOfListing(Long listing_id) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ?", listing_id);
+        try {
+            return executeBookingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting bookings of listing", e);
+        }
+    }
+
+    // public Long getBookingId(Long listingId, LocalDate startDate, LocalDate endDate, Long host_sin, Long tenant_sin) {
+    //     SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listing_id = ? AND start_date = ? AND end_date = ? AND tenant_sin = ?",
+    //                                     listingId, startDate, endDate, tenant_sin);
+    //     try {
+    //         Booking booking = executeBookingQuery(query).get(0);
+    //         return booking.booking_id();
+    //     } catch (SQLException e) {
+    //         throw new DataAccessException("Error getting booking", e);
+    //     }
+    // }
+
+    public boolean tenantSinMatchesBookingId(Long tenant_sin, Long booking_id) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE tenant_sin = ? AND booking_id = ?", tenant_sin, booking_id);
+
+        try {
+            return !executeBookingQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if tenant sin matche to booking", e);
+        }
+    }
+
+    public boolean hostSinMatchesBookingId(Long host_sin, Long booking_id) {
+        // Get all the listings id in Listing table where host_sin = host_sin
+        List<Listing> listings = getListingsByHostSin(host_sin);
+        // Get listing id from Bookings table with booking id == booking id
+        Long bookings_listing_id = getBooking(booking_id).listings_listing_id();
+
+        if (listings.isEmpty()) {
+            throw new DataAccessException("Host does not have any listings");
+        }
+
+        for (int i = 0; i < listings.size(); i++) {
+            if (bookings_listing_id.equals(listings.get(i).listing_id()))
+                return true;
+        }
+
+        return false;
+    }
+
     public void insertReview(Review review) {
         try {
             executeStatement(getInsertStatement(review, "reviews"));
@@ -674,6 +825,16 @@ public class Dao {
         }
     }
 
+    public boolean reviewExists(Long bookingId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM reviews WHERE booking_id = ?", bookingId);
+
+        try {
+            return !executeReviewQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if review exists for booking", e);
+        }
+    }
+
     private List<Review> executeReviewQuery(SqlQuery query) throws SQLException {
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
@@ -683,10 +844,24 @@ public class Dao {
             ResultSet rs = stmt.executeQuery();
             List<Review> reviews = new ArrayList<>();
             while (rs.next()) {
-                reviews.add(new Review(rs.getLong("review_id"), rs.getInt("rating_of_listing"),
-                        rs.getInt("rating_of_host"), rs.getInt("rating_of_renter"), rs.getString("comment_from_renter"),
+                // the follow handle the case where JDBC's getInt returns 0 for null
+                Integer ratingOfListing = rs.getInt("rating_of_listing");
+                if (rs.wasNull()) {
+                    ratingOfListing = null;
+                }
+                Integer ratingOfHost = rs.getInt("rating_of_host");
+                if (rs.wasNull()) {
+                    ratingOfHost = null;
+                }
+                Integer ratingOfRenter = rs.getInt("rating_of_tenant");
+                if (rs.wasNull()) {
+                    ratingOfRenter = null;
+                }
+                reviews.add(new Review(rs.getLong("review_id"), ratingOfListing, ratingOfHost,
+                        ratingOfRenter, rs.getString("comment_from_tenant"),
                         rs.getString("comment_from_host"), rs.getLong("bookings_booking_id")));
             }
+
             return reviews;
         }
     }
@@ -700,4 +875,68 @@ public class Dao {
         }
     }
 
+    public List<Review> getReviewsOfListing(Long listing_id) {
+        SqlQuery query = new SqlQuery("SELECT * FROM reviews " +
+                "JOIN bookings ON reviews.bookings_booking_id = bookings.booking_id " +
+                "WHERE bookings.listings_listing_id = ?", listing_id);
+        try {
+            return executeReviewQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting reviews by listing", e);
+        }
+    }
+
+    public void tenantRateListing(Long tenant_id, Integer rating, Long booking_id) {
+        SqlQuery query = new SqlQuery("UPDATE reviews SET rating_of_listing = ? WHERE bookings_booking_id = ?", rating, booking_id);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating rating of listing", e);
+        }
+    }
+
+    public void tenantRateHost(Long tenant_id, Integer rating, Long booking_id) {
+        SqlQuery query = new SqlQuery("UPDATE reviews SET rating_of_host = ? WHERE bookings_booking_id = ?", rating, booking_id);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating rating of host", e);
+        }
+    }
+
+    public void addCommentFromTenant(Long tenant_id, String comment, Long booking_id) {
+        SqlQuery query = new SqlQuery("UPDATE reviews SET comment_from_tenant = ? WHERE bookings_booking_id = ?", comment, booking_id);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating rating of host", e);
+        }
+    }
+
+    public void deleteCommentFromTenant(Long tenant_id, Long booking_id) {
+        SqlQuery query = new SqlQuery("UPDATE reviews SET comment_from_tenant = NULL WHERE bookings_booking_id = ?", booking_id);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating rating of host", e);
+        }
+    }
+
+    public void hostRateTenant(Long host_id, Integer rating, Long booking_id) {
+        SqlQuery query = new SqlQuery("UPDATE reviews SET rating_of_tenant = ? WHERE bookings_booking_id = ?", rating, booking_id);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating rating of host", e);
+        }
+    }
+
+    public void addCommentFromHost(Long host_id, String comment, Long booking_id) {
+        SqlQuery query = new SqlQuery("UPDATE reviews SET comment_from_host = ? WHERE bookings_booking_id = ?", comment, booking_id);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating rating of host", e);
+        }
+    }
 }
