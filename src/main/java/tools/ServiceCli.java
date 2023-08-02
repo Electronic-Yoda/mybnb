@@ -1,6 +1,9 @@
 package tools;
 
 import data.Dao;
+import domain.Listing;
+import domain.User;
+import exception.DataAccessException;
 import service.BookingService;
 import service.ListingService;
 import service.UserService;
@@ -16,6 +19,7 @@ import org.jline.reader.impl.history.DefaultHistory;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 
 public class ServiceCli {
     // Command Line Interface to interact with services. Handles user input and output relevant information to user
@@ -23,7 +27,7 @@ public class ServiceCli {
     private final Dao dao = new Dao(
             "jdbc:mysql://localhost:3307/mydb",
             "root",
-            "password"
+            ""
     );
     private final UserService userService = new UserService(dao);
     private final ListingService listingService = new ListingService(dao);
@@ -46,13 +50,17 @@ public class ServiceCli {
                 String line = reader.readLine("> ");
                 String[] commandArgs = line.split(" ");
 
-                if (commandArgs.length < 2) {
-                    System.out.println("Unknown command: " + commandArgs[0]);
+
+                if (commandArgs[0] == "") {
+                    System.out.println("Please enter a command");
                     continue;
                 }
 
                 String command = commandArgs[0];
-                String subCommand = commandArgs[1];
+                String subCommand = "";
+                
+                if (commandArgs.length > 1)
+                    subCommand = commandArgs[1];
 
                 switch (command) {
                     case "create":
@@ -65,6 +73,7 @@ public class ServiceCli {
                         handleLogoutUser(subCommand, commandArgs);
                         break;
                     case "quit":
+                        System.out.println("Goodbye!");
                         return;
                     case "add":
                         handleAddCommand(subCommand, commandArgs);
@@ -128,7 +137,7 @@ public class ServiceCli {
             CommandLine cmd = parser.parse(options, args);
 
             String userName = cmd.getOptionValue("n");
-            String userAddress = cmd.getOptionValue("a");
+            String userAddress = cmd.getOptionValue("a").replaceAll("_", " ");
             String userBirthdate = cmd.getOptionValue("b");
             String userOccupation = cmd.getOptionValue("o");
 
@@ -138,6 +147,16 @@ public class ServiceCli {
             }
 
             // TODO create user logic
+
+            User user = new User(null, userName, userAddress, LocalDate.parse(userBirthdate), userOccupation);
+            try {
+                dao.insertUser(user);
+            }
+            catch (DataAccessException e) {
+                System.out.println(e.getMessage());
+                return;
+            }
+
             System.out.printf("Creating user %s with address %s, birthdate %s, and occupation %s\n",
                     userName, userAddress, userBirthdate, userOccupation);
         } catch (Exception e) {
@@ -179,6 +198,13 @@ public class ServiceCli {
             String country = cmd.getOptionValue("co");
 
             // Process the "create listing" command here
+
+            Listing listing = new Listing(null, listingType, null, address, postalCode, null, null, city, country, null);
+
+            try {
+
+            }
+
             System.out.printf("Creating listing with type: %s, price per night: %s, address: %s, postal code: %s, " +
                     "longitude: %s, latitude: %s, city: %s, country: %s\n", listingType, pricePerNight, address,
                     postalCode, longitude, latitude, city, country);
