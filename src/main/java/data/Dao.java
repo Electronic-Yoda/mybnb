@@ -696,7 +696,7 @@ public class Dao {
         }
     }
 
-    public void changeListingAvailability(long listing_id, LocalDate prevStartDate, LocalDate prevEndDate,
+    public void changeListingAvailability(Long listing_id, LocalDate prevStartDate, LocalDate prevEndDate,
             LocalDate newStartDate, LocalDate newEndDate) {
         SqlQuery query = new SqlQuery(
                 "UPDATE availabilities SET start_date = ?, end_date = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
@@ -707,6 +707,30 @@ public class Dao {
            throw new DataAccessException("Error updating listing availabilities.", e);
         }
     }
+
+    public void changeListingAvailabilityAndPrice(Long listing_id, LocalDate prevStartDate, LocalDate prevEndDate,
+                                          LocalDate newStartDate, LocalDate newEndDate, BigDecimal newPrice) {
+        SqlQuery query = new SqlQuery(
+                "UPDATE availabilities SET start_date = ?, end_date = ?, price_per_night = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
+                newStartDate, newEndDate, newPrice, listing_id, prevStartDate, prevEndDate);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating listing availabilities.", e);
+        }
+    }
+
+    public void changeListingAvailabilityPrice(Long listing_id, LocalDate start_date, LocalDate end_date, BigDecimal newPrice) {
+        SqlQuery query = new SqlQuery(
+                "UPDATE availabilities SET price_per_night = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
+                newPrice, listing_id, start_date, end_date);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating listing availabilities.", e);
+        }
+    }
+
 
     public void insertAmenityForListing(long listing_id, String amenityName) {
         SqlQuery query = new SqlQuery("INSERT INTO listing_amenities (listing_id, amenity_id) " +

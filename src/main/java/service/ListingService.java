@@ -102,27 +102,24 @@ public class ListingService {
     }
 
 
-    public void updateListingPrice(long listingId, BigDecimal newPrice) throws ServiceException {
+    public void changeListingAvailabilityPrice(Long listingId, LocalDate start_date, LocalDate end_date, BigDecimal newPrice) throws ServiceException {
         try {
             dao.startTransaction();
-            // compareTo returns -1 if newPrice < 0
-            // TODO double check requirements
+            if (!dao.listingAvailabilityExists(listingId, start_date, end_date)) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to change availability price because availability doesnt exist"));
+            }
             if (newPrice.compareTo(BigDecimal.ZERO) < 0) {
                 throw new ServiceException(
                         String.format("Unable to update listing price, %d. Price must be a non-negative number.",
                                 newPrice));
             }
-            if (dao.listingIdExists(listingId)) {
-                throw new ServiceException(
-                        String.format(
-                                "Unable to add listing because listing with id, %d, doesnt exists",
-                                listingId));
-            }
-            dao.updateListingPrice(listingId, newPrice);
+            dao.changeListingAvailabilityPrice(listingId, start_date, end_date, newPrice);
             dao.commitTransaction();
         } catch (Exception e) {
             dao.rollbackTransaction();  // Rollback transaction if any operation failed
-            throw new ServiceException("An error occured while updating Listing price", e);
+            throw new ServiceException("Unable to change availability price", e);
         }
     }
 
