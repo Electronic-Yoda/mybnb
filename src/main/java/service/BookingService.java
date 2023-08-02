@@ -149,24 +149,25 @@ public class BookingService {
             // re-insert availability
             LocalDate newAvailabilityStartDate = booking.start_date(); // To be reset if affectedAvailability exists
             LocalDate newAvailabilityEndDate = booking.end_date(); // To be reset if affectedAvailability exists
+            BigDecimal bookingPricePerNight = booking.amount().divide(BigDecimal.valueOf(ChronoUnit.DAYS.between(booking.start_date(), booking.end_date())));
 
             // get affected availabilities (two possible cases)
             // Case 1: there is an availability whose end_date is the same as booking start_date and price_per_night is the same as booking
             Availability affectedAvailability1 = dao.getAvailabilityByListingAndEndDate(booking.listings_listing_id(), booking.start_date());
             if (affectedAvailability1 != null
-                    && affectedAvailability1.price_per_night().equals(booking.amount().divide(BigDecimal.valueOf(ChronoUnit.DAYS.between(booking.start_date(), booking.end_date()))))) {
+                    && affectedAvailability1.price_per_night().equals(bookingPricePerNight)) {
                 newAvailabilityStartDate = affectedAvailability1.start_date();
                 dao.deleteAvailability(affectedAvailability1.availability_id());
             }
             // Case 2: there is an availability whose start_date is the same as booking end_date and price_per_night is the same as booking
             Availability affectedAvailability2 = dao.getAvailabilityByListingAndStartDate(booking.listings_listing_id(), booking.end_date());
             if (affectedAvailability2 != null
-                    && affectedAvailability2.price_per_night().equals(booking.amount().divide(BigDecimal.valueOf(ChronoUnit.DAYS.between(booking.start_date(), booking.end_date()))))) {
+                    && affectedAvailability2.price_per_night().equals(bookingPricePerNight)) {
                 newAvailabilityEndDate = affectedAvailability2.end_date();
                 dao.deleteAvailability(affectedAvailability2.availability_id());
             }
             dao.insertAvailability(new Availability(null, newAvailabilityStartDate, newAvailabilityEndDate,
-                    booking.amount().divide(BigDecimal.valueOf(ChronoUnit.DAYS.between(newAvailabilityStartDate, newAvailabilityEndDate))),
+                    bookingPricePerNight,
                     booking.listings_listing_id()));
             dao.commitTransaction();
         } catch (DataAccessException e) {

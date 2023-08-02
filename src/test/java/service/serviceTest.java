@@ -281,9 +281,20 @@ public class serviceTest {
         assertTrue(reviews.get(0).comment_from_tenant().equals("Great Service!"));
         assertTrue(reviews.get(0).comment_from_host().equals("Great guest!"));
 
-
-
-
-
+        // change listing1 availability price
+        try {
+            listingService.changeListingAvailabilityPrice(
+                    1L,
+                    LocalDate.parse("2023-09-15"),
+                    LocalDate.parse("2023-09-20"),
+                    new BigDecimal("400.00")
+            );
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Availability after changing availability price:");
+        list1Availabilities.forEach(System.out::println);
+        assertTrue(list1Availabilities.get(0).price_per_night().equals(new BigDecimal("400.00")));
     }
 }
