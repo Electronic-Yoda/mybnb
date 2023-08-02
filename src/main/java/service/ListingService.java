@@ -192,36 +192,16 @@ public class ListingService {
 
 
         // ============= Search methods =============
-    public List<Listing> searchListingsByLocation(double latitude, double longitude, double distance) {
-        // TODO: Implement method
-        return null;
+    public List<Listing> searchListingsByFilter(ListingFilter filter) throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Listing> listings = dao.getListingsByFilter(filter);
+            dao.commitTransaction();
+            return listings;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException("An error occurred while trying to search listings", e);
+        }
     }
 
-    public List<Listing> searchListingsByLocationAndPrice(double latitude, double longitude, double distance,
-            boolean priceAscending) {
-        // TODO: Implement method
-        return null;
-    }
-
-    public List<Listing> searchListingsByPostalCode(String postalCode) {
-        // TODO: Implement method
-        return null;
-    }
-
-    public Listing searchListingByAddress(String address) {
-        // TODO: Implement method
-        return null;
-    }
-
-    public List<Listing> searchListingsByDateRange(LocalDate startDate, LocalDate endDate) {
-        // TODO: Implement method
-        return null;
-    }
-
-    public List<Listing> searchListingsByPostalCodeAndAmenitiesAndAvailabilityAndPriceRange(
-            String postalCode, List<String> amenities, LocalDate startDate, LocalDate endDate,
-            BigDecimal minPrice, BigDecimal maxPrice) {
-        // TODO: Implement method
-        return null;
-    }
 }
