@@ -287,7 +287,6 @@ public class Dao {
         } catch (SQLException e) {
             throw new DataAccessException("Error getting listings from host id");
         }
-
     }
 
     public boolean listingIdExists(Long listing_id) {

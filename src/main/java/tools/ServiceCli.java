@@ -1,9 +1,12 @@
 package tools;
 
 import data.Dao;
+import domain.Availability;
+import domain.Booking;
 import domain.Listing;
 import domain.User;
 import exception.DataAccessException;
+import exception.ServiceException;
 import service.BookingService;
 import service.ListingService;
 import service.UserService;
@@ -17,9 +20,14 @@ import org.jline.terminal.*;
 import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.reader.impl.history.DefaultHistory;
 
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ServiceCli {
     // Command Line Interface to interact with services. Handles user input and output relevant information to user
@@ -150,12 +158,15 @@ public class ServiceCli {
 
             User user = new User(null, userName, userAddress, LocalDate.parse(userBirthdate), userOccupation);
             try {
-                dao.insertUser(user);
+                userService.addUser(user);
+            
+            } catch (ServiceException e) {
+
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
             }
-            catch (DataAccessException e) {
-                System.out.println(e.getMessage());
-                return;
-            }
+        } 
 
             System.out.printf("Creating user %s with address %s, birthdate %s, and occupation %s\n",
                     userName, userAddress, userBirthdate, userOccupation);
@@ -166,12 +177,17 @@ public class ServiceCli {
 
     // Handler for the "create listing" command
     private void handleCreateListing(String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         try {
             Options options = new Options();
             options.addOption(
                     Option.builder("t").longOpt("listing type").hasArg().required().desc("listing type").build());
-            options.addOption(Option.builder("ppn").longOpt("price per night").hasArg().required()
-                    .desc("listing price per night").build());
+
+            // TODO REMOVE
+            // options.addOption(Option.builder("ppn").longOpt("price per night").hasArg().required()
+            //         .desc("listing price per night").build());
             options.addOption(Option.builder("a").longOpt("address").hasArg().required()
                     .desc("listing address").build());
             options.addOption(Option.builder("pc").longOpt("postal code").hasArg().required()
@@ -189,7 +205,9 @@ public class ServiceCli {
             CommandLine cmd = parser.parse(options, args);
 
             String listingType = cmd.getOptionValue("t");
-            String pricePerNight = cmd.getOptionValue("ppn");
+
+            // TODO REMOVE
+            // String pricePerNight = cmd.getOptionValue("ppn");
             String address = cmd.getOptionValue("a");
             String postalCode = cmd.getOptionValue("pc");
             String longitude = cmd.getOptionValue("lo");
@@ -199,14 +217,37 @@ public class ServiceCli {
 
             // Process the "create listing" command here
 
-            Listing listing = new Listing(null, listingType, null, address, postalCode, null, null, city, country, null);
+            if (!isValidListingType(listingType)) {
+                System.out.println("Listing type must be one of: House, Apartment, Guesthouse, Hotel");
+                return;
+            }
+
+            if (!isValidPostalCode(postalCode)) {
+                System.out.println("Postal code must be in format A1A 1A1");
+                return;
+            }
+
+            // TODO Add Listing
+            Listing listing = new Listing(null, listingType, address, postalCode, null, null, city, country, Long.parseLong(logged_in_user_sin));
 
             try {
+                //dao.insertListing(listing);
 
+                // TODO ADD AMENITIES CHANGE TO MULTI PROMPT
+
+                // PROMPT USER FOR AMENITIES "N to exit"
+                // check if amenity is valid
+
+            }  catch (ServiceException e) {
+
+                System.out.println(e.getMessage());
+                if (e.getCause() != null) {
+                    System.out.println(e.getCause().getMessage());
+                }
             }
 
             System.out.printf("Creating listing with type: %s, price per night: %s, address: %s, postal code: %s, " +
-                    "longitude: %s, latitude: %s, city: %s, country: %s\n", listingType, pricePerNight, address,
+                    "longitude: %s, latitude: %s, city: %s, country: %s\n", listingType, address,
                     postalCode, longitude, latitude, city, country);
 
         } catch (Exception e) {
@@ -216,6 +257,9 @@ public class ServiceCli {
 
     // Handler for the "create booking" command
     private void handleCreateBooking(String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         try {
             Options options = new Options();
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
@@ -243,6 +287,23 @@ public class ServiceCli {
             }
 
             // TODO add create booking
+            // TODO check requirements if user will be recommended a listing
+
+            try {
+                // Check if user sin matches to listingId
+                // if (dao.doesListingIdHaveHostSin(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin)))
+                //     System.out.println("User is host of listing, cannot book own listing");
+
+                // TODO
+                //Float amount = dao.getListingPricePerNight(Long.parseLong(listingId)); // TODO get price per night
+
+                // Create booking
+                //Booking booking = new Booking(null, LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate), dao.getCurrentDate(), paymentMethod, amount, cardNumber, Long.parseLong(logged_in_user_sin), Long.parseLong(listingId));
+
+            } catch (ServiceException e) {
+                System.out.println(e.getMessage());
+                return;
+            }
 
             System.out.printf("Created booking for listing: %s from: %s to %s\n Paid with card: %s using method: %s\n", listingId, availabilityStartDate,
                     availabilityEndDate, cardNumber, paymentMethod);
@@ -280,6 +341,9 @@ public class ServiceCli {
 
     // Handler for the "logout user" command
     private void handleLogoutUser(String subCommand, String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         if (subCommand.equals("user")) {
             System.out.printf("Logging out user: %s\n", logged_in_user_sin);
             logged_in_user_sin = "";
@@ -303,6 +367,9 @@ public class ServiceCli {
 
     // Handler for the "add availability" command
     private void handleAddAvailability(String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         try {
             Options options = new Options();
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
@@ -310,6 +377,8 @@ public class ServiceCli {
                     .desc("availability start date").build());
             options.addOption(
                     Option.builder("ed").longOpt("endDate").hasArg().required().desc("availability end date").build());
+            options.addOption(Option.builder("ppn").longOpt("price per night").hasArg().required()
+                    .desc("listing price per night").build());
 
             CommandLineParser parser = new DefaultParser();
             CommandLine cmd = parser.parse(options, args);
@@ -317,6 +386,7 @@ public class ServiceCli {
             String listingId = cmd.getOptionValue("l");
             String availabilityStartDate = cmd.getOptionValue("sd");
             String availabilityEndDate = cmd.getOptionValue("ed");
+            String pricePerNight = cmd.getOptionValue("ppn");
 
             if (!(isValidDate(availabilityStartDate) && isValidDate(availabilityEndDate))) {
                 System.out.println("Start Date and End Date must be in format YYYY-MM-DD");
@@ -325,8 +395,19 @@ public class ServiceCli {
 
             // TODO availability logic
 
-            System.out.printf("Added availability for listing: %s from: %s to %s\n", listingId, availabilityStartDate,
-                    availabilityEndDate);
+            // TODO Check if user sin matches to listingId
+
+            Availability availability = new Availability(null, LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate), new BigDecimal(pricePerNight), Long.parseLong(listingId));
+
+            try {
+                //dao.insertAvailability(availability);
+            } catch (ServiceException e) {
+                System.out.println(e.getMessage());
+                return;
+            }
+
+            System.out.printf("Added availability for listing: %s from: %s to %s\nprice per night: %s\n", listingId, availabilityStartDate,
+                    availabilityEndDate, pricePerNight);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -347,6 +428,9 @@ public class ServiceCli {
 
     // Handler for the "remove availability" command
     private void handleRemoveAvailability(String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         try {
             Options options = new Options();
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
@@ -368,6 +452,9 @@ public class ServiceCli {
             }
 
             // TODO removal logic
+
+            // TODO Check if user sin matches to listingId
+
             boolean removed = true;
 
             if (removed) {
@@ -397,6 +484,9 @@ public class ServiceCli {
 
     // Handler for the "delete listing" command
     private void handleDeleteListing(String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         try {
             Options options = new Options();
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
@@ -439,6 +529,9 @@ public class ServiceCli {
 
     // Handler for the "show mylistings" command
     private void handleShowMyListings(String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         System.out.println("My Listings:");
         // TODO show mylistings logic
         // use saved user sin
@@ -447,6 +540,9 @@ public class ServiceCli {
 
     // Handler for the "show mybookings" command
     private void handleShowMyBookings(String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         System.out.println("My Bookings:");
         // TODO show myBooking logic
         // use saved user sin
@@ -467,6 +563,9 @@ public class ServiceCli {
 
     // Handler for the "cancel booking" command
     private void handleCancelBooking(String[] args) {
+        if (checkUserLoggedIn())
+            return;
+
         try {
             Options options = new Options();
             options.addOption(Option.builder("b").longOpt("booking-id").hasArg().required().desc("booking id").build());
@@ -499,6 +598,78 @@ public class ServiceCli {
         } catch (ParseException e) {
             return false;
         }
+    }
+
+    private boolean isValidPostalCode(String postalCode) {
+        /*
+         * Validates Canadian postal code
+         */
+        Pattern pattern = Pattern.compile("^(?!.*[DFIOQU])[A-VXY][0-9][A-Z] ?[0-9][A-Z][0-9]$");
+        Matcher matcher = pattern.matcher(postalCode);
+        return matcher.matches();
+    }
+
+    private boolean isValidListingType(String listingType) {
+        List<String> listingTypes = new ArrayList<>();
+        listingTypes.add("House");
+        listingTypes.add("Apartment");
+        listingTypes.add("Guesthouse");
+        listingTypes.add("Hotel");
+
+        return listingTypes.contains(listingType);
+    }
+
+    private boolean isValidAmenity(String amenity) {
+    List<String> amenityTypes = new ArrayList<>();
+
+        amenityTypes.add("Wifi");
+        amenityTypes.add("Washer");
+        amenityTypes.add("Air conditioning");
+        amenityTypes.add("Dedicated workspace");
+        amenityTypes.add("Hair dryer");
+        amenityTypes.add("Kitchen");
+        amenityTypes.add("Dryer");
+        amenityTypes.add("Heating");
+        amenityTypes.add("TV");
+        amenityTypes.add("Iron");
+        amenityTypes.add("Pool");
+        amenityTypes.add("Free parking");
+        amenityTypes.add("Crib");
+        amenityTypes.add("BBQ grill");
+        amenityTypes.add("Indoor fireplace");
+        amenityTypes.add("Hot tub");
+        amenityTypes.add("EV charger");
+        amenityTypes.add("Gym");
+        amenityTypes.add("Breakfast");
+        amenityTypes.add("Smoking allowed");
+        amenityTypes.add("Beachfront");
+        amenityTypes.add("Ski-in/ski-out");
+        amenityTypes.add("Waterfront");
+        amenityTypes.add("Smoke alarm");
+        amenityTypes.add("Carbon monoxide alarm");
+
+        return amenityTypes.contains(amenity);
+    }
+
+    public boolean checkUserLoggedIn() {
+        if (!logged_in_user_sin.equals("")) {
+            System.out.println("Please login first");
+            return false;
+        }
+        return true;
+    }
+
+    public boolean getValidDateRange(String startDate, String endDate) {
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        return end.compareTo(start) > 0;
+    }
+
+    public Integer getNumberOfDays(String startDate, String endDate) {
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        // TODO
+        return 0;
     }
 
     public static void main(String[] args) throws ClassNotFoundException {
