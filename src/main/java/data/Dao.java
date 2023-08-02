@@ -138,9 +138,9 @@ public class Dao {
         return new SqlQuery(sql.toString(), parameters.toArray());
     }
 
-    public void insertUser(User user) {
+    public Long insertUser(User user) {
         try {
-            executeStatement(getInsertStatement(user, "users"));
+            return executeStatement(getInsertStatement(user, "users"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting user", e);
         }
@@ -304,6 +304,47 @@ public class Dao {
             return executeListingQuery(query).get(0);
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if listing_id exists", e);
+        }
+    }
+
+    public Float getListingPricePerNight(Long listing_id) {
+        SqlQuery query = new SqlQuery("SELECT price_per_night FROM listings WHERE listing_id = ?", listing_id);
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            stmt.setObject(1, listing_id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getFloat("price_per_night");
+            } else {
+                return null;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting listing price per night", e);
+        }
+    }
+
+    public Float getAverageListingPriceByCity(String city) {
+        SqlQuery query = new SqlQuery("SELECT AVG(price_per_night) FROM listings WHERE city = ?", city);
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            stmt.setObject(1, city);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getFloat("AVG(price_per_night)");
+            } else {
+                return null;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting average listing price by city", e);
+        }
+    }
+
+    public boolean doesCityExists(String city) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE city = ?", city);
+        try {
+            return !executeListingQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if city exists", e);
         }
     }
 
@@ -731,14 +772,48 @@ public class Dao {
         }
     }
 
+    private List<Amenity> executeListingAmenityQuery(SqlQuery query) throws SQLException {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Amenity> amenities = new ArrayList<>();
+            while (rs.next()) {
+                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name")));
+            }
+            return amenities;
+        }
+    }
 
-    public void insertAmenityForListing(long listing_id, String amenityName) {
+    public void insertAmenityForListing(Long listing_id, String amenityName) {
         SqlQuery query = new SqlQuery("INSERT INTO listing_amenities (listing_id, amenity_id) " +
                 "VALUES (?, (SELECT amenity_id FROM amenities WHERE amenity_name = ?))", listing_id, amenityName);
         try {
             executeStatement(query);
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting amenity for listing", e);
+        }
+    }
+
+    public void deleteAmenityForListing(Long listing_id, String amenityName) {
+        SqlQuery query = new SqlQuery("DELETE FROM listing_amenities WHERE listing_id = ? AND amenity_id = " +
+                "(SELECT amenity_id FROM amenities WHERE amenity_name = ?)", listing_id, amenityName);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting amenity for listing", e);
+        }
+    }
+
+    public boolean listingHasAmenity(Long listing_id, String amenityName) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listing_amenities WHERE listing_id = ? AND amenity_id = " +
+                "(SELECT amenity_id FROM amenities WHERE amenity_name = ?)", listing_id, amenityName);
+        try {
+            return !executeListingAmenityQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if listing has amenity", e);
         }
     }
 
@@ -802,6 +877,15 @@ public class Dao {
     //         throw new DataAccessException("Error getting booking", e);
     //     }
     // }
+
+    public List<Booking> getTenenatBookings(Long tenant_sin) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE tenant_sin = ?", tenant_sin);
+        try {
+            return executeBookingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting tenant bookings", e);
+        }
+    }
 
     public boolean tenantSinMatchesBookingId(Long tenant_sin, Long booking_id) {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE tenant_sin = ? AND booking_id = ?", tenant_sin, booking_id);

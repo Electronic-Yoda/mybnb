@@ -120,6 +120,34 @@ public class BookingService {
         }
     }
 
+    public boolean isTenantOfBooking(Long booking_id, Long tenant_sin) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.tenantSinMatchesBookingId(tenant_sin, booking_id)) {
+                throw new ServiceException(String.format("Unable to cancel booking because tenant sin does not match. "));
+            }
+            dao.commitTransaction();
+            return true;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to cancel booking."), e);
+        }
+    }
+
+    public boolean isHostOfBooking(Long booking_id, Long host_sin) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.hostSinMatchesBookingId(host_sin, booking_id)) {
+                throw new ServiceException(String.format("Unable to cancel booking because host sin does not match. "));
+            }
+            dao.commitTransaction();
+            return true;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to cancel booking."), e);
+        }
+    }
+
     private void cancelBooking(Long booking_id, LocalDate currentDate) throws ServiceException {
         try {
             dao.startTransaction();
@@ -180,6 +208,21 @@ public class BookingService {
         try {
             dao.startTransaction();
             List<Booking> bookings = dao.getBookings();
+            dao.commitTransaction();
+            return bookings;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve bookings."), e);
+        }
+    }
+
+    public List<Booking> getBookingsOfUser(Long user_sin) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.userExists(user_sin)) {
+                throw new ServiceException(String.format("User with sin, %d, does not exist.", user_sin));
+            }
+            List<Booking> bookings = dao.getTenenatBookings(user_sin);
             dao.commitTransaction();
             return bookings;
         } catch (Exception e) {
@@ -438,6 +481,18 @@ public class BookingService {
         } catch (Exception e) {
             dao.rollbackTransaction();
             throw new ServiceException(String.format("Unable to retrieve cancelled bookings."), e);
+        }
+    }
+
+    public LocalDate getCurrDate() throws ServiceException {
+        try {
+            dao.startTransaction();
+            LocalDate currDate = dao.getCurrentDate().toLocalDate();
+            dao.commitTransaction();
+            return currDate;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve current date."), e);
         }
     }
 }
