@@ -322,7 +322,13 @@ public class ServiceCli {
                         LocalDate.parse(availabilityEndDate), today, new BigDecimal(amount.toString()), paymentMethod, Long.parseLong(cardNumber),
                         Long.parseLong(logged_in_user_sin), Long.parseLong(listingId));
 
-                bookingService.addBooking(booking);
+                Long booking_id = bookingService.addBooking(booking);
+
+            System.out.printf("Created booking for listing: %s from: %s to %s\n Paid with card: %s using method: %s\n",
+                    listingId, availabilityStartDate,
+                    availabilityEndDate, cardNumber, paymentMethod);
+
+                System.out.printf("Booking id: %s\n", booking_id);
 
             } catch (ServiceException e) {
                 System.out.println(e.getMessage());
@@ -330,10 +336,6 @@ public class ServiceCli {
                     System.out.println(e.getCause().getMessage());
                 }
             }
-
-            System.out.printf("Created booking for listing: %s from: %s to %s\n Paid with card: %s using method: %s\n",
-                    listingId, availabilityStartDate,
-                    availabilityEndDate, cardNumber, paymentMethod);
 
         } catch (Exception e) {
                 System.out.println(e.getMessage());
@@ -346,6 +348,11 @@ public class ServiceCli {
     // Handler for the "login user" command
     private void handleLoginUser(String subCommand, String[] args) {
         if (subCommand.equals("user")) {
+            if (!logged_in_user_sin.equals("")) {
+                System.out.printf("User %s already logged in\n", logged_in_user_sin);
+                return;
+            }
+
             try {
                 Options options = new Options();
                 options.addOption(Option.builder("s").longOpt("sin").hasArg().required().desc("user sin").build());
@@ -379,7 +386,7 @@ public class ServiceCli {
             System.out.printf("Logging out user: %s\n", logged_in_user_sin);
             logged_in_user_sin = "";
         } else {
-            System.out.println("Unknown sub-command for 'login': " + subCommand);
+            System.out.println("Unknown sub-command for 'logout': " + subCommand);
         }
     }
 
@@ -542,18 +549,18 @@ public class ServiceCli {
             }
 
             // Check if user is host of listing
-            if (!listingService.isHostOfListing(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin))) {
+            if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
                 System.out.println("User is not host of listing");
                 return;
             }
 
             // Check if availability exists
-            if (!listingService.doesAvailabilityExist(Long.parseLong(listingId), LocalDate.parse(availabilityEndDate), LocalDate.parse(availabilityEndDate))) {
+            if (!listingService.doesAvailabilityExist(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate))) {
                 System.out.println("Availability does not exist");
                 return;
             }
 
-            listingService.deleteAvailability(Long.parseLong(listingId), LocalDate.parse(availabilityEndDate), LocalDate.parse(availabilityEndDate));
+            listingService.deleteAvailability(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate));
 
             System.out.printf("Removed availability for listing: %s from: %s to %s\n", listingId,
                 availabilityStartDate, availabilityEndDate);
@@ -591,7 +598,7 @@ public class ServiceCli {
             String listingId = cmd.getOptionValue("l");
 
             // Check if user sin matches to host
-            if (!listingService.isHostOfListing(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin))) {
+            if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
                 System.out.println("User is not host of listing");
                 return;
             }
@@ -606,7 +613,10 @@ public class ServiceCli {
             listingService.deleteListing(Long.parseLong(listingId));
             System.out.println("Deleted listing with id: " + listingId);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+                System.out.println(e.getMessage());
+                if (e.getCause() != null) {
+                    System.out.println(e.getCause().getMessage());
+                }
         }
     }
 
@@ -719,6 +729,10 @@ public class ServiceCli {
             
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+            System.out.println(e.getCause().getMessage());
+            }
+            return;
         }
     }
 
