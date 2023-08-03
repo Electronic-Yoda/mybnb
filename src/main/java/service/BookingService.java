@@ -298,14 +298,6 @@ public class BookingService {
             dao.rollbackTransaction();
             throw new ServiceException(String.format("Unable to delete tenant rating for listing."), e);
         }
-        dao.startTransaction();
-
-        // Check tenant_id matches in booking
-        if (!dao.tenantSinMatchesBookingId(tenant_id, booking_id))
-            throw new ServiceException("Tenant does not match with booking");
-
-        dao.tenantRateListing(tenant_id, -1, booking_id);
-        dao.commitTransaction();
     }
 
     public void tenantRateHost(Long tenant_id, Integer rating, Long booking_id, LocalDate currentDate) throws ServiceException {
