@@ -445,25 +445,27 @@ public class Dao {
         }
     }
 
-    public boolean hasFutureBookings(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ?", listing_id);
+    public boolean hasFutureBookings(Long listing_id, LocalDate currentDate) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ? " +
+                "AND end_date >= ?", listing_id, currentDate);
 
         try {
-            List<Booking> bookings = executeBookingQuery(query);
+            return !executeBookingQuery(query).isEmpty();
+//            List<Booking> bookings = executeBookingQuery(query);
 
             // There are no bookings for this listing
-            if (bookings.isEmpty())
-                return false;
-
-            LocalDate current_Date = getCurrentDate().toLocalDate();
-
-            for (int i = 0; i < bookings.size(); i++) {
-                Booking booking = bookings.get(i);
-
-                if (booking.end_date().isAfter(current_Date))
-                    return true;
-            }
-            return false;
+//            if (bookings.isEmpty()) {
+//                return false;
+//
+//            LocalDate current_Date = getCurrentDate().toLocalDate();
+//
+//            for (int i = 0; i < bookings.size(); i++) {
+//                Booking booking = bookings.get(i);
+//
+//                if (booking.end_date().isAfter(current_Date))
+//                    return true;
+//            }
+//            return false;
         } catch (SQLException e) {
             throw new DataAccessException("Error getting bookings with listing id, " + listing_id, e);
         }

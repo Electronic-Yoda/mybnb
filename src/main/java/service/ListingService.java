@@ -3,6 +3,7 @@ package service;
 import data.Dao;
 import domain.Availability;
 import domain.Listing;
+import domain.User;
 import exception.ServiceException;
 import filter.ListingFilter;
 import org.apache.logging.log4j.LogManager;
@@ -38,17 +39,23 @@ public class ListingService {
         }
     }
 
-    public void deleteListing(long listingId) throws ServiceException {
+    public void deleteListing(Long listingId, Long userSin, LocalDate currentDate) throws ServiceException {
         try {
             dao.startTransaction();  // Begin transaction
-            if (!dao.listingIdExists(listingId)) {
+            Listing listing = dao.getListingById(listingId);
+            if (listing == null) {
                 throw new ServiceException(
                         String.format("Unable to delete listing because listing with id, %d, doesn't exist", listingId));
             }
-            if (dao.hasFutureBookings(listingId)) {
+            if (!listing.users_sin().equals(userSin)) {
+                throw new ServiceException(
+                        String.format("Unable to delete listing because listing with id, %d, doesn't belong to user with sin, %d", listingId, userSin));
+            }
+            if (dao.hasFutureBookings(listingId, currentDate)) {
                 throw new ServiceException(
                         String.format("Unable to delete listing because there are future bookings."));
             }
+
             dao.deleteListing(listingId);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
         } catch (Exception e) {
@@ -102,9 +109,18 @@ public class ListingService {
     }
 
 
-    public void changeListingAvailabilityPrice(Long listingId, LocalDate start_date, LocalDate end_date, BigDecimal newPrice) throws ServiceException {
+    public void changeListingAvailabilityPrice(Long listingId, Long userSin, LocalDate start_date, LocalDate end_date, BigDecimal newPrice) throws ServiceException {
         try {
             dao.startTransaction();
+            Listing listing = dao.getListingById(listingId);
+            if (listing == null) {
+                throw new ServiceException(
+                        String.format("Unable to change availability price because listing with id, %d, doesn't exist", listingId));
+            }
+            if (!listing.users_sin().equals(userSin)) {
+                throw new ServiceException(
+                        String.format("Unable to change availability price because listing with id, %d, doesn't belong to user with sin, %d", listingId, userSin));
+            }
             if (!dao.listingAvailabilityExists(listingId, start_date, end_date)) {
                 throw new ServiceException(
                         String.format(
@@ -123,9 +139,18 @@ public class ListingService {
         }
     }
 
-    public void addAvailability(Availability availability) throws ServiceException {
+    public void addAvailability(Availability availability, Long userSin) throws ServiceException {
         try {
             dao.startTransaction();
+            Listing listing = dao.getListingById(availability.listings_listing_id());
+            if (listing == null) {
+                throw new ServiceException(
+                        String.format("Unable to add availability because listing with id, %d, doesn't exist", availability.listings_listing_id()));
+            }
+            if (!listing.users_sin().equals(userSin)) {
+                throw new ServiceException(
+                        String.format("Unable to add availability because listing with id, %d, doesn't belong to user with sin, %d", availability.listings_listing_id(), userSin));
+            }
             if (dao.listingAvailabilityExists(availability.listings_listing_id(),
                     availability.start_date(), availability.end_date())) {
                 throw new ServiceException(
@@ -143,10 +168,19 @@ public class ListingService {
     }
 
 
-    public void changeListingAvailability(long listingId, LocalDate prevStartDate, LocalDate prevEndDate,
+    public void changeListingAvailability(long listingId, Long userSin, LocalDate prevStartDate, LocalDate prevEndDate,
             LocalDate newStartDate, LocalDate newEndDate) throws ServiceException {
         try {
             dao.startTransaction();
+            Listing listing = dao.getListingById(listingId);
+            if (listing == null) {
+                throw new ServiceException(
+                        String.format("Unable to change availability because listing with id, %d, doesn't exist", listingId));
+            }
+            if (!listing.users_sin().equals(userSin)) {
+                throw new ServiceException(
+                        String.format("Unable to change availability because listing with id, %d, doesn't belong to user with sin, %d", listingId, userSin));
+            }
             if (!dao.listingAvailabilityExists(listingId, prevStartDate, prevEndDate)) {
                 throw new ServiceException(
                         String.format(

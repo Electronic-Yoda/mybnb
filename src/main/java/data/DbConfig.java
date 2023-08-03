@@ -199,18 +199,20 @@ public class DbConfig {
             stmt.executeUpdate();
             stmt.close();
 
-            addForeignKeySql = "ALTER TABLE bookings " +
-                    "ADD CONSTRAINT user_bookings_listings " +
-                    "FOREIGN KEY (listings_listing_id) " +
-                    "REFERENCES listings (listing_id);";
-            stmt = conn.prepareStatement(addForeignKeySql);
-            stmt.executeUpdate();
-            stmt.close();
+            // Note: we chose to not enforce foreign key constraints on the listings table
+            // because we want booking tables to remain after a listing is deleted
+//            addForeignKeySql = "ALTER TABLE bookings " +
+//                    "ADD CONSTRAINT user_bookings_listings " +
+//                    "FOREIGN KEY (listings_listing_id) " +
+//                    "REFERENCES listings (listing_id);";
+//            stmt = conn.prepareStatement(addForeignKeySql);
+//            stmt.executeUpdate();
+//            stmt.close();
 
-            addForeignKeySql = "ALTER TABLE cancelled_bookings " +
-                    "ADD CONSTRAINT cancelled_bookings_listings " +
-                    "FOREIGN KEY (listings_listing_id) " +
-                    "REFERENCES listings (listing_id);";
+//            addForeignKeySql = "ALTER TABLE cancelled_bookings " +
+//                    "ADD CONSTRAINT cancelled_bookings_listings " +
+//                    "FOREIGN KEY (listings_listing_id) " +
+//                    "REFERENCES listings (listing_id);";
 
             addForeignKeySql = "ALTER TABLE listings " +
                     "ADD CONSTRAINT users_listings " +

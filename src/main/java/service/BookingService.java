@@ -41,6 +41,16 @@ public class BookingService {
                 throw new ServiceException(String.format("listing with id, %d, does not exist.", booking.listings_listing_id()));
             }
 
+            // check if booker exists
+            if (!dao.userExists(booking.tenant_sin())) {
+                throw new ServiceException(String.format("user with sin, %d, does not exist.", booking.tenant_sin()));
+            }
+
+            // check if booker is not host
+            if (dao.getListingById(booking.listings_listing_id()).users_sin().equals(booking.tenant_sin())) {
+                throw new ServiceException(String.format("Cannot book! User with sin, %d, is a host.", booking.tenant_sin()));
+            }
+
             Availability affectedAvailability = null;
             BigDecimal pricePerNight = null;
             try {

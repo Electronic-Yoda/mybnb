@@ -199,11 +199,11 @@ public class ServiceCli {
 
             // Process the "create listing" command here
 
-            Listing listing = new Listing(null, listingType, null, address, postalCode, null, null, city, country, null);
+            //Listing listing = new Listing(null, listingType, null, address, postalCode, null, null, city, country, null);
 
-            try {
-
-            }
+//            try {
+//
+//            }
 
             System.out.printf("Creating listing with type: %s, price per night: %s, address: %s, postal code: %s, " +
                     "longitude: %s, latitude: %s, city: %s, country: %s\n", listingType, pricePerNight, address,
