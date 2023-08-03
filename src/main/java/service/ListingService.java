@@ -64,6 +64,50 @@ public class ListingService {
         }
     }
 
+    public Listing getListing(Long listingId) throws ServiceException {
+        try {
+            dao.startTransaction();  // Begin transaction
+            if (!dao.listingIdExists(listingId)) {
+                throw new ServiceException(
+                        String.format("Unable to get listing because listing with id, %d, doesn't exist", listingId));
+            }
+            Listing listing = dao.getListingById(listingId);
+            dao.commitTransaction();  // Commit transaction if all operations succeeded
+            return listing;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occurred while trying to get listing", e);
+        }
+    }
+
+    public boolean doesListingExist(Long listingId) throws ServiceException {
+        try {
+            dao.startTransaction();  // Begin transaction
+            boolean exists = dao.listingIdExists(listingId);
+            dao.commitTransaction();  // Commit transaction if all operations succeeded
+            return exists;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occurred while checking if listing exists", e);
+        }
+    }
+
+    public boolean doesListingHaveFutureBookings(Long listingId, LocalDate currentDate) throws ServiceException {
+        try {
+            dao.startTransaction();  // Begin transaction
+            if (!dao.listingIdExists(listingId)) {
+                throw new ServiceException(
+                        String.format("Unable to check if listing has future bookings because listing with id, %d, doesn't exist", listingId));
+            }
+            boolean hasFutureBookings = dao.hasFutureBookings(listingId, currentDate);
+            dao.commitTransaction();  // Commit transaction if all operations succeeded
+            return hasFutureBookings;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occurred while checking if listing has future bookings", e);
+        }
+    }
+
     public List<Listing> getListings() throws ServiceException {
         try {
             dao.startTransaction();  // Begin transaction
@@ -108,6 +152,84 @@ public class ListingService {
         }
     }
 
+    public void addAmenityToListing(Listing listing, String amenity) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.listingExists(listing)) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to add amenity because listing at %s, %s. %s doesn't exist",
+                                listing.country(), listing.city(), listing.postal_code()));
+            }
+            if (dao.listingHasAmenity(listing.listing_id(), amenity)) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to add amenity because listing at %s, %s. %s already has amenity %s",
+                                listing.country(), listing.city(), listing.postal_code(), amenity));
+            }
+            
+            dao.insertAmenityForListing(listing.listing_id(), amenity);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while adding amenity", e);
+        }
+    }
+
+    public Float getListingPricePerNight(Long listingId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.listingIdExists(listingId)) {
+                throw new ServiceException(
+                        String.format("Unable to get listing price because listing with id, %d, doesn't exist",
+                                listingId));
+            }
+            Float price = dao.getListingPricePerNight(listingId);
+            dao.commitTransaction();
+            return price;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while getting listing price", e);
+        }
+    }
+
+    public boolean doesCityExists(String city) throws ServiceException {
+        try {
+            dao.startTransaction();
+            boolean exists = dao.doesCityExists(city);
+            dao.commitTransaction();
+            return exists;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while checking if city exists", e);
+        }
+    }
+
+    public String getRecommendedPricePerNight(Long listingId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.listingIdExists(listingId)) {
+                throw new ServiceException(
+                        String.format("Unable to get listing price because listing with id, %d, doesn't exist",
+                                listingId));
+            }
+            String city = dao.getListingById(listingId).city();
+            Float price = dao.getAverageListingPriceByCity(city);
+
+            if (price == null) {
+                throw new ServiceException(
+                        String.format("Unable to get recommended price no listings in city, %s, have a price",
+                                city));
+            }
+
+            dao.commitTransaction();
+            return price.toString();
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            System.out.println(e.getMessage());
+            throw new ServiceException("An error occured while getting listing price", e);
+        }
+    }
 
     public void changeListingAvailabilityPrice(Long listingId, Long userSin, LocalDate start_date, LocalDate end_date, BigDecimal newPrice) throws ServiceException {
         try {
@@ -167,6 +289,96 @@ public class ListingService {
         }
     }
 
+    public void deleteAvailability(Long listingId, LocalDate startDate, LocalDate endDate) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.listingAvailabilityExists(listingId, startDate, endDate)) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to delete availability because availability doesnt exist",
+                                listingId, startDate, endDate));
+            }
+            dao.deleteAvailability(listingId, startDate, endDate);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while deleting availability", e);
+        }
+    }
+
+    public boolean doesAvailabilityExist(Long listingId, LocalDate startDate, LocalDate endDate) throws ServiceException {
+        try {
+            dao.startTransaction();
+            boolean exists = dao.listingAvailabilityExists(listingId, startDate, endDate);
+            dao.commitTransaction();
+            return exists;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while checking if availability exists", e);
+        }
+    }
+
+    public boolean doesDateOverlapWithExistingAvailability(Long listingId, LocalDate startDate, LocalDate endDate) throws ServiceException {
+        try {
+            dao.startTransaction();
+            
+            // Check if listing exists
+            if (!dao.listingIdExists(listingId)) {
+                throw new ServiceException(
+                        String.format("Unable to check for overlap because listing with id, %d, doesn't exist",
+                                listingId));
+            }
+
+            // Check if date range is valid
+            if (startDate.compareTo(endDate) >= 0) {
+                throw new ServiceException(
+                        String.format("Unable to check for overlap because start date, %s, is after end date, %s",
+                                startDate, endDate));
+            }
+
+            List<Availability> availability = getAvailabilitiesOfListing(listingId);
+
+            for (int i = 0; i<availability.size(); i++) {
+                // Check if date range overlaps with existing availability
+                // Case 1: Start date is between existing availability
+                if (startDate.compareTo(availability.get(i).start_date()) >= 0 && startDate.compareTo(availability.get(i).end_date()) <= 0) {
+                    return true;
+                }
+
+                // Case 2: End date is between existing availability
+                if (endDate.compareTo(availability.get(i).start_date()) >= 0 && endDate.compareTo(availability.get(i).end_date()) <= 0) {
+                    return true;
+                }
+
+                // Case 3: Existing availability is between date range
+                if (startDate.compareTo(availability.get(i).start_date()) <= 0 && endDate.compareTo(availability.get(i).end_date()) >= 0) {
+                    return true;
+                }
+            }
+            dao.commitTransaction();
+            return false;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while checking for overlap", e);
+        }
+    }
+
+    public boolean isHostOfListing(Long sin, Long listingId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.listingIdExists(listingId)) {
+                throw new ServiceException(
+                        String.format("Unable to check if user is host because listing with id, %d, doesn't exist",
+                                listingId));
+            }
+            boolean isHost = dao.doesListingIdHaveHostSin(listingId, sin);
+            dao.commitTransaction();
+            return isHost;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while checking if user is host", e);
+        }
+    }
 
     public void changeListingAvailability(long listingId, Long userSin, LocalDate prevStartDate, LocalDate prevEndDate,
             LocalDate newStartDate, LocalDate newEndDate) throws ServiceException {
