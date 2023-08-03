@@ -182,7 +182,7 @@ public class ServiceCli {
     private void handleCreateListing(String[] args) {
         if (!checkUserLoggedIn())
             return;
-
+        
         try {
             Options options = new Options();
             options.addOption(
@@ -229,30 +229,38 @@ public class ServiceCli {
                     Long.parseLong(logged_in_user_sin));
 
             try {
-                listingService.addListing(listing);
+                Long listing_id = listingService.addListing(listing);
+
+                listing = new Listing(listing_id, listingType, address, postalCode, new BigDecimal(longitude), new BigDecimal(latitude), city, country,
+                    Long.parseLong(logged_in_user_sin));
 
                 System.out.printf("Creating listing with type: %s, address: %s, postal code: %s, " +
                                     "longitude: %s, latitude: %s, city: %s, country: %s\n", listingType, address,
                                     postalCode, longitude, latitude, city, country);
+                System.out.println("Listing id: " + listing_id);
 
                 Scanner myScanner = new Scanner(System.in);
+
                 while (true) {
-            
                     System.out.println(
                             "Amenity must be one of: Wifi, Washer, Air conditioning, Dedicated workspace, Hair dryer, Kitchen, Dryer, Heating, TV, Iron, Pool, Free parking, Crib, BBQ grill, Indoor fireplace, Hot tub, EV charger, Gym, Breakfast, Smoking allowed, Beachfront, Ski-in/ski-out, Waterfront, Smoke alarm, Carbon monoxide alarm\n"
                                     + "Enter amenity or 'done' to finish adding amenities");
                     String amenity = myScanner.nextLine();
-                    if (amenity.equals("done"))
+                    if (amenity.equals("done")) {
                         break;
+                    }
+                        
                     if (!isValidAmenity(amenity)) {
                         System.out.println(
                                 "Amenity must be one of: Wifi, Washer, Air conditioning, Dedicated workspace, Hair dryer, Kitchen, Dryer, Heating, TV, Iron, Pool, Free parking, Crib, BBQ grill, Indoor fireplace, Hot tub, EV charger, Gym, Breakfast, Smoking allowed, Beachfront, Ski-in/ski-out, Waterfront, Smoke alarm, Carbon monoxide alarm");
                         continue;
                     }
-                    listingService.addAmenityToListing(listing, amenity);
-                }
-                myScanner.close();
 
+                    amenity = amenity.toLowerCase();
+                    listingService.addAmenityToListing(listing, amenity);
+                    System.out.println("Amenity added: " + amenity);
+                }
+                
             } catch (ServiceException e) {
                 System.out.println(e.getMessage());
                 if (e.getCause() != null) {
@@ -301,11 +309,13 @@ public class ServiceCli {
 
             try {
                 // Check if user sin matches to listingId
-                if (dao.doesListingIdHaveHostSin(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin)))
+                if (listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
                     System.out.println("User is host of listing, cannot book own listing");
-
+                    return;
+                }
+                
                 Float amount = listingService.getListingPricePerNight(Long.parseLong(listingId)) * getNumberOfDays(availabilityStartDate, availabilityEndDate);
-                LocalDate today = bookingService.getCurrDate();
+                LocalDate today = LocalDate.parse(bookingService.getCurrDate().toString());
 
                 // Create booking
                 Booking booking = new Booking(null, LocalDate.parse(availabilityStartDate),
@@ -315,12 +325,10 @@ public class ServiceCli {
                 bookingService.addBooking(booking);
 
             } catch (ServiceException e) {
-
                 System.out.println(e.getMessage());
                 if (e.getCause() != null) {
                     System.out.println(e.getCause().getMessage());
                 }
-                return;
             }
 
             System.out.printf("Created booking for listing: %s from: %s to %s\n Paid with card: %s using method: %s\n",
@@ -328,7 +336,10 @@ public class ServiceCli {
                     availabilityEndDate, cardNumber, paymentMethod);
 
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+                System.out.println(e.getMessage());
+                if (e.getCause() != null) {
+                    System.out.println(e.getCause().getMessage());
+                }
         }
     }
 
@@ -424,13 +435,16 @@ public class ServiceCli {
                 }
                 else {
                     String recommendedPricePerNight = listingService.getRecommendedPricePerNight(Long.parseLong(listingId));
-                    System.out.println("Recommended price per night (Average price per night based on city): " + recommendedPricePerNight);
+                    if (recommendedPricePerNight.equals("0.0")) {
+                        System.out.println("No recommended pricing exists for this city. Please provide price per night");
+                    } else {
+                        System.out.println("Recommended price per night (Average price per night based on city): " + recommendedPricePerNight);
+                    }
                 }
 
                 Scanner myScanner = new Scanner(System.in);
                 System.out.println("Confirm price:");
                 pricePerNight = myScanner.nextLine();
-                myScanner.close();
             }
 
             if (!(isValidDate(availabilityStartDate) && isValidDate(availabilityEndDate))) {
@@ -452,13 +466,13 @@ public class ServiceCli {
 
             try {
                 // Check if user is host of listing
-                if (!listingService.isHostOfListing(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin))) {
+                if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
                     System.out.println("User is not host of listing");
                     return;
                 }
 
                 // Check no overlapping availability
-                if (listingService.doesDateOverlapWithExistingAvailability(Long.parseLong(listingId), LocalDate.parse(availabilityEndDate), LocalDate.parse(availabilityEndDate))) {
+                if (listingService.doesDateOverlapWithExistingAvailability(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate))) {
                     System.out.println("Availability overlaps with existing availability");
                     return;
                 }
@@ -467,7 +481,7 @@ public class ServiceCli {
                 Availability availability = new Availability(null, LocalDate.parse(availabilityStartDate),
                         LocalDate.parse(availabilityEndDate), new BigDecimal(pricePerNight), Long.parseLong(listingId));
 
-                dao.insertAvailability(availability);
+                listingService.addAvailability(availability);
             } catch (ServiceException e) {
                 System.out.println(e.getMessage());
                 if (e.getCause() != null) {
@@ -688,7 +702,7 @@ public class ServiceCli {
 
             String bookingId = cmd.getOptionValue("b");
 
-            LocalDate today = bookingService.getCurrDate();
+            LocalDate today = LocalDate.parse(bookingService.getCurrDate().toString());
             // check if user is tenant or host
             if (bookingService.isTenantOfBooking(Long.parseLong(bookingId), Long.parseLong(logged_in_user_sin))) {
                 bookingService.tenantCancelBooking(Long.parseLong(bookingId), Long.parseLong(logged_in_user_sin), today);

@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
 
 public class BookingService {
@@ -40,7 +41,7 @@ public class BookingService {
             if (!dao.listingIdExists(booking.listings_listing_id())) {
                 throw new ServiceException(String.format("listing with id, %d, does not exist.", booking.listings_listing_id()));
             }
-
+            
             Availability affectedAvailability = null;
             BigDecimal pricePerNight = null;
             try {
@@ -73,7 +74,7 @@ public class BookingService {
             Listing listing = dao.getListingById(booking.listings_listing_id());
             BigDecimal amount = pricePerNight.multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(booking.start_date(), booking.end_date())), new MathContext(2));
 
-           Booking bookingToInsert = new Booking(null, booking.start_date(), booking.end_date(), LocalDate.now(),
+            Booking bookingToInsert = new Booking(null, booking.start_date(), booking.end_date(), LocalDate.now(),
                    amount, booking.payment_method(), booking.card_number(), booking.tenant_sin(), booking.listings_listing_id());
 
             // Insert booking
@@ -484,10 +485,11 @@ public class BookingService {
         }
     }
 
-    public LocalDate getCurrDate() throws ServiceException {
+    public Date getCurrDate() throws ServiceException {
         try {
             dao.startTransaction();
-            LocalDate currDate = dao.getCurrentDate().toLocalDate();
+            System.out.println(dao.getCurrentDate());
+            Date currDate = dao.getCurrentDate();
             dao.commitTransaction();
             return currDate;
         } catch (Exception e) {

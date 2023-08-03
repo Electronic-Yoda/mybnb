@@ -308,7 +308,7 @@ public class Dao {
     }
 
     public Float getListingPricePerNight(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT price_per_night FROM listings WHERE listing_id = ?", listing_id);
+        SqlQuery query = new SqlQuery("SELECT price_per_night FROM availabilities INNER JOIN listings ON availabilities.listings_listing_id = listings.listing_id  WHERE listing_id = ?", listing_id);
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             stmt.setObject(1, listing_id);
@@ -324,7 +324,7 @@ public class Dao {
     }
 
     public Float getAverageListingPriceByCity(String city) {
-        SqlQuery query = new SqlQuery("SELECT AVG(price_per_night) FROM listings WHERE city = ?", city);
+        SqlQuery query = new SqlQuery("SELECT AVG(price_per_night) FROM availabilities INNER JOIN listings ON availabilities.listings_listing_id = listings.listing_id  WHERE city = ?", city);
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             stmt.setObject(1, city);
@@ -335,6 +335,7 @@ public class Dao {
                 return null;
             }
         } catch (SQLException e) {
+            System.out.println(e);
             throw new DataAccessException("Error getting average listing price by city", e);
         }
     }
@@ -476,10 +477,15 @@ public class Dao {
     public Date getCurrentDate() {
         SqlQuery query = new SqlQuery("SELECT CURRENT_DATE()");
         Connection conn = threadLocalConnection.get();
-        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
 
-            ResultSet rs = stmt.executeQuery();
-            return rs.getDate(0);
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDate(1);
+                } else {
+                    throw new DataAccessException("No date returned");
+                }
+            }
         } catch (SQLException e) {
             throw new DataAccessException("Error getting date", e);
         }

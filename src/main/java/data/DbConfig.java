@@ -24,16 +24,29 @@ public class DbConfig {
 
     public final List<String> amenities = Arrays.asList(
             "wifi",
-            "tv",
-            "kitchen",
-            "parking",
-            "elevator",
-            "gym",
-            "hot tub",
-            "pool",
             "washer",
-            "backyard",
-            "dryer");
+            "air conditioning",
+            "dedicated workspace",
+            "hair dryer",
+            "kitchen",
+            "dryer",
+            "heating",
+            "tv",
+            "iron",
+            "pool",
+            "free parking",
+            "crib",
+            "bbq grill",
+            "indoor fireplace",
+            "hot tub",
+            "ev charger",
+            "gym",
+            "breakfast",
+            "smoking allowed",
+            "beachfront",
+            "ski-in/ski-out", "waterfront",
+            "smoke alarm",
+            "carbon monoxide alarm");
 
     public DbConfig(String url, String username, String password) {
         this.url = url;
@@ -193,7 +206,7 @@ public class DbConfig {
             addForeignKeySql = "ALTER TABLE reviews " +
                     "ADD CONSTRAINT reviews_bookings " +
                     "FOREIGN KEY (bookings_booking_id) " +
-                    "REFERENCES bookings (booking_id)"+
+                    "REFERENCES bookings (booking_id)" +
                     "ON DELETE CASCADE;";
             stmt = conn.prepareStatement(addForeignKeySql);
             stmt.executeUpdate();
@@ -241,6 +254,7 @@ public class DbConfig {
             String insertAmenitySql = "INSERT INTO amenities (amenity_name) VALUES (?);";
             stmt = conn.prepareStatement(insertAmenitySql);
             for (String amenity : amenities) {
+                System.out.println(amenity);
                 stmt.setString(1, amenity);
                 stmt.executeUpdate();
             }
@@ -294,7 +308,7 @@ public class DbConfig {
     public List<Amenity> getAmenities() {
         String sql = "SELECT * FROM amenities";
         try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
             ResultSet rs = stmt.executeQuery();
             List<Amenity> amenities = new ArrayList<>();
             while (rs.next()) {

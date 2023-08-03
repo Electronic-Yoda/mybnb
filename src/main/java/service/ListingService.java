@@ -160,6 +160,7 @@ public class ListingService {
                                 "Unable to add amenity because listing at %s, %s. %s already has amenity %s",
                                 listing.country(), listing.city(), listing.postal_code(), amenity));
             }
+            
             dao.insertAmenityForListing(listing.listing_id(), amenity);
             dao.commitTransaction();
         } catch (Exception e) {
@@ -207,10 +208,18 @@ public class ListingService {
             }
             String city = dao.getListingById(listingId).city();
             Float price = dao.getAverageListingPriceByCity(city);
+
+            if (price == null) {
+                throw new ServiceException(
+                        String.format("Unable to get recommended price no listings in city, %s, have a price",
+                                city));
+            }
+
             dao.commitTransaction();
             return price.toString();
         } catch (Exception e) {
             dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            System.out.println(e.getMessage());
             throw new ServiceException("An error occured while getting listing price", e);
         }
     }
