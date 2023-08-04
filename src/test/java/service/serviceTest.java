@@ -323,5 +323,6 @@ public class serviceTest {
             e.printStackTrace();
         }
         assertTrue(listings.size() == 1);
+        dbConfig.resetTables();
     }
 }

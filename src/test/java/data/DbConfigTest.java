@@ -20,5 +20,6 @@ class DbConfigTest {
         dbConfig.dropTables();
         tablesRetrieved = dbConfig.getTables();
         assertTrue(tablesRetrieved.isEmpty());
+        dbConfig.resetTables();
     }
 }

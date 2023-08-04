@@ -18,7 +18,7 @@ public class Dao {
     private final String username;
     private final String password;
     private static ThreadLocal<Connection> threadLocalConnection = new ThreadLocal<>();
-    
+
     public Dao(String url, String username, String password) {
         this.url = url;
         this.username = username;
@@ -456,21 +456,45 @@ public class Dao {
         }
     }
 
-    public List<String> getAmenitiesByListingId(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT amenity_name FROM amenities " +
-                "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
-                "WHERE listing_amenities.listing_id = ?", listing_id);
+    private List<Amenity> executeAmenityQuery(SqlQuery query) throws SQLException {
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
-            stmt.setObject(1, listing_id);
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
             ResultSet rs = stmt.executeQuery();
-            List<String> amenities = new ArrayList<>();
+            List<Amenity> amenities = new ArrayList<>();
             while (rs.next()) {
-                amenities.add(rs.getString("amenity_name"));
+                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name"),
+                        rs.getBigDecimal("impact_on_revenue")));
             }
             return amenities;
+        }
+    }
+
+    public List<String> getAmenitiesByListingId(Long listing_id) {
+
+        SqlQuery query = new SqlQuery("SELECT * FROM amenities " +
+                "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
+                "WHERE listing_amenities.listing_id = ?", listing_id);
+        try {
+            List<Amenity> amenities = executeAmenityQuery(query);
+            List<String> amenityNames = new ArrayList<>();
+            for (Amenity amenity : amenities) {
+                amenityNames.add(amenity.amenity_name());
+            }
+            return amenityNames;
         } catch (SQLException e) {
-            throw new DataAccessException("Error getting listing amenities", e);
+            throw new DataAccessException("Error getting amenities by listing id", e);
+        }
+    }
+
+    public List<Amenity> getAllAmenities() {
+        SqlQuery query = new SqlQuery("SELECT * FROM amenities");
+        try {
+            return executeAmenityQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all amenities", e);
         }
     }
 
@@ -774,7 +798,8 @@ public class Dao {
             ResultSet rs = stmt.executeQuery();
             List<Amenity> amenities = new ArrayList<>();
             while (rs.next()) {
-                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name")));
+                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name"),
+                        rs.getBigDecimal("impact_on_revenue")));
             }
             return amenities;
         }
@@ -801,10 +826,11 @@ public class Dao {
     }
 
     public boolean listingHasAmenity(Long listing_id, String amenityName) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listing_amenities WHERE listing_id = ? AND amenity_id = " +
-                "(SELECT amenity_id FROM amenities WHERE amenity_name = ?)", listing_id, amenityName);
+        SqlQuery query = new SqlQuery("SELECT amenities.* FROM amenities " +
+                "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
+                "WHERE listing_amenities.listing_id = ? AND amenities.amenity_name = ?", listing_id, amenityName);
         try {
-            return !executeListingAmenityQuery(query).isEmpty();
+            return !executeAmenityQuery(query).isEmpty();
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if listing has amenity", e);
         }

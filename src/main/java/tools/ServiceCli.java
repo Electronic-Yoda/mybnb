@@ -1,10 +1,7 @@
 package tools;
 
 import data.Dao;
-import domain.Availability;
-import domain.Booking;
-import domain.Listing;
-import domain.User;
+import domain.*;
 import exception.DataAccessException;
 import exception.ServiceException;
 import service.BookingService;
@@ -25,9 +22,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,7 +52,8 @@ public class ServiceCli {
                     .build();
 
             while (true) {
-                String line = reader.readLine("> ");
+                String prompt = logged_in_user_sin.equals("") ? "> " : "user " + logged_in_user_sin + "> ";
+                String line = reader.readLine(prompt);
                 String[] commandArgs = line.split(" ");
 
                 if (commandArgs[0] == "") {
@@ -105,8 +101,9 @@ public class ServiceCli {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
+
     }
 
     // Handlers for each command/sub-command
@@ -144,6 +141,7 @@ public class ServiceCli {
                     Option.builder("o").longOpt("occupation").hasArg().required().desc("user occupation").build());
 
             CommandLineParser parser = new DefaultParser();
+
             CommandLine cmd = parser.parse(options, args);
 
             String userSin = cmd.getOptionValue("s");
@@ -159,30 +157,28 @@ public class ServiceCli {
 
             User user = new User(Long.parseLong(userSin), userName, userAddress, LocalDate.parse(userBirthdate),
                     userOccupation);
-            try {
-                userService.addUser(user);
-
-            } catch (ServiceException e) {
-                System.out.println(e.getMessage());
-                if (e.getCause() != null) {
-                    System.out.println(e.getCause().getMessage());
-                }
-                return;
-            }
+            userService.addUser(user);
 
             System.out.printf("Creating user %s with sin %s, address %s, birthdate %s, and occupation %s\n",
                     userName, userSin, userAddress, userBirthdate, userOccupation);
 
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+            return;
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
         }
+
+
     }
 
     // Handler for the "create listing" command
     private void handleCreateListing(String[] args) {
         if (!checkUserLoggedIn())
             return;
-        
         try {
             Options options = new Options();
             options.addOption(
@@ -190,7 +186,7 @@ public class ServiceCli {
 
             options.addOption(Option.builder("a").longOpt("address").hasArg().required()
                     .desc("listing address").build());
-            options.addOption(Option.builder("pc").longOpt("postal code").hasArg().required()
+            options.addOption(Option.builder("pc").longOpt("postal_code").hasArg().required()
                     .desc("listing postal code").build());
             options.addOption(Option.builder("lo").longOpt("longitude").hasArg().required()
                     .desc("listing longitude").build());
@@ -203,7 +199,6 @@ public class ServiceCli {
 
             CommandLineParser parser = new DefaultParser();
             CommandLine cmd = parser.parse(options, args);
-
             String listingType = cmd.getOptionValue("t");
             String address = cmd.getOptionValue("a").replaceAll("_", " ");
             String postalCode = cmd.getOptionValue("pc").replaceAll("_", " ");
@@ -224,60 +219,34 @@ public class ServiceCli {
                 return;
             }
 
-            // TODO Add Listing
             Listing listing = new Listing(null, listingType, address, postalCode, new BigDecimal(longitude), new BigDecimal(latitude), city, country,
                     Long.parseLong(logged_in_user_sin));
 
-            try {
-                Long listing_id = listingService.addListing(listing);
+            Long listing_id =  listingService.addListing(listing);
 
-                listing = new Listing(listing_id, listingType, address, postalCode, new BigDecimal(longitude), new BigDecimal(latitude), city, country,
-                    Long.parseLong(logged_in_user_sin));
+            System.out.printf("Creating listing with type: %s, address: %s, postal code: %s, " +
+                                "longitude: %s, latitude: %s, city: %s, country: %s\n", listingType, address,
+                                postalCode, longitude, latitude, city, country);
+            System.out.println("Listing id: " + listing_id);
 
-                System.out.printf("Creating listing with type: %s, address: %s, postal code: %s, " +
-                                    "longitude: %s, latitude: %s, city: %s, country: %s\n", listingType, address,
-                                    postalCode, longitude, latitude, city, country);
-                System.out.println("Listing id: " + listing_id);
+            // Add amenities
+            amenityAdderRoutine(listing_id);
 
-                Scanner myScanner = new Scanner(System.in);
-
-                while (true) {
-                    System.out.println(
-                            "Amenity must be one of: Wifi, Washer, Air conditioning, Dedicated workspace, Hair dryer, Kitchen, Dryer, Heating, TV, Iron, Pool, Free parking, Crib, BBQ grill, Indoor fireplace, Hot tub, EV charger, Gym, Breakfast, Smoking allowed, Beachfront, Ski-in/ski-out, Waterfront, Smoke alarm, Carbon monoxide alarm\n"
-                                    + "Enter amenity or 'done' to finish adding amenities");
-                    String amenity = myScanner.nextLine();
-                    if (amenity.equals("done")) {
-                        break;
-                    }
-                        
-                    if (!isValidAmenity(amenity)) {
-                        System.out.println(
-                                "Amenity must be one of: Wifi, Washer, Air conditioning, Dedicated workspace, Hair dryer, Kitchen, Dryer, Heating, TV, Iron, Pool, Free parking, Crib, BBQ grill, Indoor fireplace, Hot tub, EV charger, Gym, Breakfast, Smoking allowed, Beachfront, Ski-in/ski-out, Waterfront, Smoke alarm, Carbon monoxide alarm");
-                        continue;
-                    }
-
-                    amenity = amenity.toLowerCase();
-                    listingService.addAmenityToListing(listing, amenity);
-                    System.out.println("Amenity added: " + amenity);
-                }
-                
-            } catch (ServiceException e) {
-                System.out.println(e.getMessage());
-                if (e.getCause() != null) {
-                    System.out.println(e.getCause().getMessage());
-                }
-            }
-
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
         }
+
     }
 
     // Handler for the "create booking" command
     private void handleCreateBooking(String[] args) {
         if (!checkUserLoggedIn())
             return;
-
         try {
             Options options = new Options();
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
@@ -304,63 +273,58 @@ public class ServiceCli {
                 return;
             }
 
-            // TODO add create booking
-            // TODO check requirements if user will be recommended a listing
+        // TODO add create booking
+        // TODO check requirements if user will be recommended a listing
 
-            try {
-                // Check if user sin matches to listingId
-                if (listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
-                    System.out.println("User is host of listing, cannot book own listing");
-                    return;
-                }
-                
-                Float amount = listingService.getListingPricePerNight(Long.parseLong(listingId)) * getNumberOfDays(availabilityStartDate, availabilityEndDate);
-                LocalDate today = LocalDate.parse(bookingService.getCurrDate().toString());
-
-                // Create booking
-                Booking booking = new Booking(null, LocalDate.parse(availabilityStartDate),
-                        LocalDate.parse(availabilityEndDate), today, new BigDecimal(amount.toString()), paymentMethod, Long.parseLong(cardNumber),
-                        Long.parseLong(logged_in_user_sin), Long.parseLong(listingId));
-
-                Long booking_id = bookingService.addBooking(booking);
-
-            System.out.printf("Created booking for listing: %s from: %s to %s\n Paid with card: %s using method: %s\n",
-                    listingId, availabilityStartDate,
-                    availabilityEndDate, cardNumber, paymentMethod);
-
-                System.out.printf("Booking id: %s\n", booking_id);
-
-            } catch (ServiceException e) {
-                System.out.println(e.getMessage());
-                if (e.getCause() != null) {
-                    System.out.println(e.getCause().getMessage());
-                }
+            // Check if user sin matches to listingId
+            if (listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
+                System.out.println("User is host of listing, cannot book own listing");
+                return;
             }
 
-        } catch (Exception e) {
-                System.out.println(e.getMessage());
-                if (e.getCause() != null) {
-                    System.out.println(e.getCause().getMessage());
-                }
+            Float amount = listingService.getListingPricePerNight(Long.parseLong(listingId)) * getNumberOfDays(availabilityStartDate, availabilityEndDate);
+            LocalDate today = LocalDate.parse(bookingService.getCurrDate().toString());
+
+            // Create booking
+            Booking booking = new Booking(null, LocalDate.parse(availabilityStartDate),
+                    LocalDate.parse(availabilityEndDate), today, new BigDecimal(amount.toString()), paymentMethod, Long.parseLong(cardNumber),
+                    Long.parseLong(logged_in_user_sin), Long.parseLong(listingId));
+
+            Long booking_id = bookingService.addBooking(booking);
+
+        System.out.printf("Created booking for listing: %s from: %s to %s\n Paid with card: %s using method: %s\n",
+                listingId, availabilityStartDate,
+                availabilityEndDate, cardNumber, paymentMethod);
+
+            System.out.printf("Booking id: %s\n", booking_id);
+
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
         }
+
+
     }
 
     // Handler for the "login user" command
     private void handleLoginUser(String subCommand, String[] args) {
-        if (subCommand.equals("user")) {
-            if (!logged_in_user_sin.equals("")) {
-                System.out.printf("User %s already logged in\n", logged_in_user_sin);
-                return;
-            }
-
-            try {
+        try {
+            if (subCommand.equals("user")) {
+                if (!logged_in_user_sin.equals("")) {
+                    System.out.printf("User %s already logged in\n", logged_in_user_sin);
+                    return;
+                }
                 Options options = new Options();
                 options.addOption(Option.builder("s").longOpt("sin").hasArg().required().desc("user sin").build());
 
                 CommandLineParser parser = new DefaultParser();
                 CommandLine cmd = parser.parse(options, args);
-
                 String userSin = cmd.getOptionValue("s");
+
 
                 if (!userService.userExists(Long.parseLong(userSin))) {
                     System.out.println("User does not exist");
@@ -369,11 +333,16 @@ public class ServiceCli {
 
                 logged_in_user_sin = userSin;
                 System.out.printf("Login with SIN %s\n", userSin);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
+            } else {
+                System.out.println("Unknown sub-command for 'login': " + subCommand);
             }
-        } else {
-            System.out.println("Unknown sub-command for 'login': " + subCommand);
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -407,7 +376,6 @@ public class ServiceCli {
     private void handleAddAvailability(String[] args) {
         if (!checkUserLoggedIn())
             return;
-
         try {
             Options options = new Options();
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
@@ -464,44 +432,42 @@ public class ServiceCli {
                 System.out.println("Price per night must be not negative");
                 return;
             }
-            
+
             // Date range makes sense
             if (!getValidDateRange(availabilityStartDate, availabilityEndDate)) {
                 System.out.println("Start Date must be before End Date");
                 return;
             }
 
-            try {
-                // Check if user is host of listing
-                if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
-                    System.out.println("User is not host of listing");
-                    return;
-                }
 
-                // Check no overlapping availability
-                if (listingService.doesDateOverlapWithExistingAvailability(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate))) {
-                    System.out.println("Availability overlaps with existing availability");
-                    return;
-                }
+//                // Check if user is host of listing
+//                if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
+//                    System.out.println("User is not host of listing");
+//                    return;
+//                }
+//
+//                // Check no overlapping availability
+//                if (listingService.doesDateOverlapWithExistingAvailability(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate))) {
+//                    System.out.println("Availability overlaps with existing availability");
+//                    return;
+//                }
 
-                // add availability
-                Availability availability = new Availability(null, LocalDate.parse(availabilityStartDate),
-                        LocalDate.parse(availabilityEndDate), new BigDecimal(pricePerNight), Long.parseLong(listingId));
+            // add availability
+            Availability availability = new Availability(null, LocalDate.parse(availabilityStartDate),
+                    LocalDate.parse(availabilityEndDate), new BigDecimal(pricePerNight), Long.parseLong(listingId));
 
-                listingService.addAvailability(availability, Long.parseLong(logged_in_user_sin));
-            } catch (ServiceException e) {
-                System.out.println(e.getMessage());
-                if (e.getCause() != null) {
-                System.out.println(e.getCause().getMessage());
-                }
-                return;
-            }
-
+            listingService.addAvailability(availability, Long.parseLong(logged_in_user_sin));
             System.out.printf("Added availability for listing: %s from: %s to %s\nprice per night: %s\n", listingId,
                     availabilityStartDate,
                     availabilityEndDate, pricePerNight);
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+            System.out.println(e.getCause().getMessage());
+            }
+            return;
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -522,7 +488,6 @@ public class ServiceCli {
     private void handleRemoveAvailability(String[] args) {
         if (!checkUserLoggedIn())
             return;
-
         try {
             Options options = new Options();
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
@@ -548,25 +513,26 @@ public class ServiceCli {
                 return;
             }
 
-            // Check if user is host of listing
-            if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
-                System.out.println("User is not host of listing");
-                return;
-            }
-
-            // Check if availability exists
-            if (!listingService.doesAvailabilityExist(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate))) {
-                System.out.println("Availability does not exist");
-                return;
-            }
-
-            listingService.deleteAvailability(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate));
+//            // Check if user is host of listing
+//            if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
+//                System.out.println("User is not host of listing");
+//                return;
+//            }
+//
+//            // Check if availability exists
+//            if (!listingService.doesAvailabilityExist(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate))) {
+//                System.out.println("Availability does not exist");
+//                return;
+//            }
+            listingService.deleteAvailability(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate));
 
             System.out.printf("Removed availability for listing: %s from: %s to %s\n", listingId,
                 availabilityStartDate, availabilityEndDate);
             
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             System.out.println(e.getMessage());
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -612,11 +578,13 @@ public class ServiceCli {
             // delete listing
             listingService.deleteListing(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin), LocalDate.now());
             System.out.println("Deleted listing with id: " + listingId);
-        } catch (Exception e) {
-                System.out.println(e.getMessage());
-                if (e.getCause() != null) {
-                    System.out.println(e.getCause().getMessage());
-                }
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -630,6 +598,12 @@ public class ServiceCli {
                 handleShowMyBookings(args);
                 break;
             // TODO: Add other "show" sub-commands handlers here, if needed
+            case "amenities":
+                handleShowAmenities(args);
+                break;
+            case "availabilities":
+                handleShowAvailability(args);
+                break;
             default:
                 System.out.println("Unknown sub-command for 'show': " + subCommand);
                 break;
@@ -685,6 +659,62 @@ public class ServiceCli {
         }
     }
 
+    private void handleShowAmenities(String[] args) {
+        if (!checkUserLoggedIn())
+            return;
+
+        System.out.println("Amenities:");
+
+        try {
+            Options options = new Options();
+            options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
+            CommandLineParser parser = new DefaultParser();
+            CommandLine cmd = parser.parse(options, args);
+
+            String listingId = cmd.getOptionValue("l");
+
+            List<String> amenities = listingService.getAmenitiesOfListing(Long.parseLong(listingId));
+
+            System.out.println("Amenities for listing id: " + listingId);
+            for (String amenity : amenities) {
+                System.out.println(amenity);
+            }
+
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void handleShowAvailability(String[] args) {
+        if (!checkUserLoggedIn())
+            return;
+
+        System.out.println("Availabilities:");
+
+        try {
+            Options options = new Options();
+            options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
+            CommandLineParser parser = new DefaultParser();
+            CommandLine cmd = parser.parse(options, args);
+
+            String listingId = cmd.getOptionValue("l");
+
+            List<Availability> availabilities = listingService.getAvailabilitiesOfListing(Long.parseLong(listingId));
+
+            System.out.println("Availabilities for listing id: " + listingId);
+            for (Availability availability : availabilities) {
+                System.out.println(availability);
+            }
+
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+        } catch (org.apache.commons.cli.ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     // Handler for the "cancel" command
     private void handleCancelCommand(String subCommand, String[] args) {
         switch (subCommand) {
@@ -727,10 +757,10 @@ public class ServiceCli {
 
             System.out.println("Cancelled booking with id: " + bookingId);
             
-        } catch (Exception e) {
+        } catch (ServiceException | org.apache.commons.cli.ParseException e) {
             System.out.println(e.getMessage());
             if (e.getCause() != null) {
-            System.out.println(e.getCause().getMessage());
+                System.out.println(e.getCause().getMessage());
             }
             return;
         }
@@ -767,38 +797,6 @@ public class ServiceCli {
         return listingTypes.contains(listingType);
     }
 
-    private boolean isValidAmenity(String amenity) {
-        List<String> amenityTypes = new ArrayList<>();
-
-        amenityTypes.add("Wifi");
-        amenityTypes.add("Washer");
-        amenityTypes.add("Air conditioning");
-        amenityTypes.add("Dedicated workspace");
-        amenityTypes.add("Hair dryer");
-        amenityTypes.add("Kitchen");
-        amenityTypes.add("Dryer");
-        amenityTypes.add("Heating");
-        amenityTypes.add("TV");
-        amenityTypes.add("Iron");
-        amenityTypes.add("Pool");
-        amenityTypes.add("Free parking");
-        amenityTypes.add("Crib");
-        amenityTypes.add("BBQ grill");
-        amenityTypes.add("Indoor fireplace");
-        amenityTypes.add("Hot tub");
-        amenityTypes.add("EV charger");
-        amenityTypes.add("Gym");
-        amenityTypes.add("Breakfast");
-        amenityTypes.add("Smoking allowed");
-        amenityTypes.add("Beachfront");
-        amenityTypes.add("Ski-in/ski-out");
-        amenityTypes.add("Waterfront");
-        amenityTypes.add("Smoke alarm");
-        amenityTypes.add("Carbon monoxide alarm");
-
-        return amenityTypes.contains(amenity);
-    }
-
     public boolean checkUserLoggedIn() {
         if (logged_in_user_sin.equals("")) {
             System.out.println("Please login first");
@@ -817,6 +815,44 @@ public class ServiceCli {
         LocalDate start = LocalDate.parse(startDate);
         LocalDate end = LocalDate.parse(endDate);
         return ChronoUnit.DAYS.between(start, end);
+    }
+
+    private void amenityAdderRoutine(Long listingID){
+        Scanner myScanner = new Scanner(System.in);
+        Map<String, BigDecimal> amenities = new HashMap<>();
+        try {
+            for (Amenity allowedAmenity : listingService.getAllAllowedAmenities()) {
+                amenities.put(allowedAmenity.amenity_name(), allowedAmenity.impact_on_revenue());
+            }
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
+        System.out.println("Amenity must be one of: " + amenities.keySet().toString());
+        System.out.println("Enter amenity name or enter 'done' to finish adding amenities");
+        while (true) {
+            String amenity = myScanner.nextLine();
+            if (amenity.equals("done")) {
+                break;
+            }
+            if (!amenities.keySet().contains(amenity.toLowerCase())) {
+                System.out.println("Amenity must be one of: " + amenities.keySet().toString());
+                continue;
+            }
+
+            amenity = amenity.toLowerCase();
+            try {
+                listingService.addAmenityToListing(listingID, Long.parseLong(logged_in_user_sin), amenity);
+            } catch (ServiceException e) {
+                System.out.println(e.getMessage());
+                if (e.getCause() != null) {
+                    System.out.println(e.getCause().getMessage());
+                }
+            }
+            System.out.println("Amenity added: " + amenity + ". Expected revenue increase: " + amenities.get(amenity) + "%");
+        }
     }
 
     public static void main(String[] args) throws ClassNotFoundException {

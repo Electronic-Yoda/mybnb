@@ -1,9 +1,11 @@
 package service;
 
 import data.Dao;
+import domain.Amenity;
 import domain.Availability;
 import domain.Listing;
 import domain.User;
+import exception.DataAccessException;
 import exception.ServiceException;
 import filter.ListingFilter;
 import org.apache.logging.log4j.LogManager;
@@ -11,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ListingService {
@@ -152,14 +155,17 @@ public class ListingService {
         }
     }
 
-    public void addAmenityToListing(Listing listing, String amenity) throws ServiceException {
+    public void addAmenityToListing(Long listingID, Long userSin, String amenity) throws ServiceException {
         try {
             dao.startTransaction();
-            if (!dao.listingExists(listing)) {
+            Listing listing = dao.getListingById(listingID);
+            if (listing == null) {
                 throw new ServiceException(
-                        String.format(
-                                "Unable to add amenity because listing at %s, %s. %s doesn't exist",
-                                listing.country(), listing.city(), listing.postal_code()));
+                        String.format("Unable to add amenity because listing with id, %d, doesn't exist", listingID));
+            }
+            if (!listing.users_sin().equals(userSin)) {
+                throw new ServiceException(
+                        String.format("Unable to add amenity because listing with id, %d, doesn't belong to user with sin, %d", listingID, userSin));
             }
             if (dao.listingHasAmenity(listing.listing_id(), amenity)) {
                 throw new ServiceException(
@@ -273,6 +279,13 @@ public class ListingService {
                 throw new ServiceException(
                         String.format("Unable to add availability because listing with id, %d, doesn't belong to user with sin, %d", availability.listings_listing_id(), userSin));
             }
+            if (doesDateOverlapWithExistingAvailability(availability)) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to add availability because availability overlaps with existing availability",
+                                availability.listings_listing_id(),
+                                availability.start_date(), availability.end_date()));
+            }
             if (dao.listingAvailabilityExists(availability.listings_listing_id(),
                     availability.start_date(), availability.end_date())) {
                 throw new ServiceException(
@@ -289,9 +302,18 @@ public class ListingService {
         }
     }
 
-    public void deleteAvailability(Long listingId, LocalDate startDate, LocalDate endDate) throws ServiceException {
+    public void deleteAvailability(Long listingId, Long userSin, LocalDate startDate, LocalDate endDate) throws ServiceException {
         try {
             dao.startTransaction();
+            Listing listing = dao.getListingById(listingId);
+            if (listing == null) {
+                throw new ServiceException(
+                        String.format("Unable to delete availability because listing with id, %d, doesn't exist", listingId));
+            }
+            if (!listing.users_sin().equals(userSin)) {
+                throw new ServiceException(
+                        String.format("Unable to delete availability because listing with id, %d, doesn't belong to user with sin, %d", listingId, userSin));
+            }
             if (!dao.listingAvailabilityExists(listingId, startDate, endDate)) {
                 throw new ServiceException(
                         String.format(
@@ -318,47 +340,45 @@ public class ListingService {
         }
     }
 
-    public boolean doesDateOverlapWithExistingAvailability(Long listingId, LocalDate startDate, LocalDate endDate) throws ServiceException {
+    // Helper method to check if date range overlaps with existing availability
+    // Note: we do not use start and commit transaction here because this method is used within a transaction
+    private boolean doesDateOverlapWithExistingAvailability(Availability availability) throws ServiceException {
         try {
-            dao.startTransaction();
-            
             // Check if listing exists
-            if (!dao.listingIdExists(listingId)) {
+            if (!dao.listingIdExists(availability.listings_listing_id())) {
                 throw new ServiceException(
                         String.format("Unable to check for overlap because listing with id, %d, doesn't exist",
-                                listingId));
+                                availability.availability_id()));
             }
 
             // Check if date range is valid
-            if (startDate.compareTo(endDate) >= 0) {
+            if (availability.start_date().compareTo(availability.end_date()) >= 0) {
                 throw new ServiceException(
                         String.format("Unable to check for overlap because start date, %s, is after end date, %s",
-                                startDate, endDate));
+                                availability.start_date(), availability.end_date()));
             }
 
-            List<Availability> availability = getAvailabilitiesOfListing(listingId);
+            List<Availability> availabilities = dao.getAvailabilitiesOfListing(availability.listings_listing_id());
 
-            for (int i = 0; i<availability.size(); i++) {
+            for (int i = 0; i<availabilities.size(); i++) {
                 // Check if date range overlaps with existing availability
                 // Case 1: Start date is between existing availability
-                if (startDate.compareTo(availability.get(i).start_date()) >= 0 && startDate.compareTo(availability.get(i).end_date()) <= 0) {
+                if (availability.start_date().compareTo(availabilities.get(i).start_date()) >= 0 && availability.start_date().compareTo(availabilities.get(i).end_date()) <= 0) {
                     return true;
                 }
 
                 // Case 2: End date is between existing availability
-                if (endDate.compareTo(availability.get(i).start_date()) >= 0 && endDate.compareTo(availability.get(i).end_date()) <= 0) {
+                if (availability.end_date().compareTo(availabilities.get(i).start_date()) >= 0 && availability.end_date().compareTo(availabilities.get(i).end_date()) <= 0) {
                     return true;
                 }
 
                 // Case 3: Existing availability is between date range
-                if (startDate.compareTo(availability.get(i).start_date()) <= 0 && endDate.compareTo(availability.get(i).end_date()) >= 0) {
+                if (availability.start_date().compareTo(availabilities.get(i).start_date()) <= 0 && availability.end_date().compareTo(availabilities.get(i).end_date()) >= 0) {
                     return true;
                 }
             }
-            dao.commitTransaction();
             return false;
-        } catch (Exception e) {
-            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+        } catch (DataAccessException e) {
             throw new ServiceException("An error occured while checking for overlap", e);
         }
     }
@@ -433,6 +453,35 @@ public class ListingService {
         } catch (Exception e) {
             dao.rollbackTransaction();  // Rollback transaction if any operation failed
             throw new ServiceException("An error occurred while trying to get availabilities", e);
+        }
+    }
+
+    public List<Amenity> getAllAllowedAmenities() throws ServiceException {
+        try {
+            dao.startTransaction();  // Begin transaction
+            List<Amenity> amenities = dao.getAllAmenities();
+            dao.commitTransaction();  // Commit transaction if all operations succeeded
+            return amenities;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occurred while trying to get amenities", e);
+        }
+    }
+
+    public List<String> getAmenitiesOfListing(Long listing_id) throws ServiceException {
+        try {
+            dao.startTransaction();  // Begin transaction
+            if (!dao.listingIdExists(listing_id)) {
+                throw new ServiceException(
+                        String.format("Unable to get amenities because listing with id, %d, doesn't exist",
+                                listing_id));
+            }
+            List<String> amenities = dao.getAmenitiesByListingId(listing_id);
+            dao.commitTransaction();  // Commit transaction if all operations succeeded
+            return amenities;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occurred while trying to get amenities", e);
         }
     }
 

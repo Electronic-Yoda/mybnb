@@ -3,10 +3,9 @@ package data;
 import domain.Amenity;
 import exception.DataAccessException;
 
+import java.math.BigDecimal;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class DbConfig {
     private final String url;
@@ -22,36 +21,13 @@ public class DbConfig {
             "listings",
             "users");
 
-    public final List<String> amenities = Arrays.asList(
-            "wifi",
-            "washer",
-            "air conditioning",
-            "dedicated workspace",
-            "hair dryer",
-            "kitchen",
-            "dryer",
-            "heating",
-            "tv",
-            "iron",
-            "pool",
-            "free parking",
-            "crib",
-            "bbq grill",
-            "indoor fireplace",
-            "hot tub",
-            "ev charger",
-            "gym",
-            "breakfast",
-            "smoking allowed",
-            "beachfront",
-            "ski-in/ski-out", "waterfront",
-            "smoke alarm",
-            "carbon monoxide alarm");
+    private Map<String, BigDecimal> amenityImpactMap = new HashMap<>();
 
     public DbConfig(String url, String username, String password) {
         this.url = url;
         this.username = username;
         this.password = password;
+        initializeAmenities();
     }
 
     // For testing purposes
@@ -59,6 +35,35 @@ public class DbConfig {
         this.url = "jdbc:mysql://localhost:3307/mydb";
         this.username = "root";
         this.password = "";
+        initializeAmenities();
+    }
+
+    private void initializeAmenities() {
+        amenityImpactMap.put("wifi", BigDecimal.valueOf(3.0));
+        amenityImpactMap.put("washer", BigDecimal.valueOf(2.0));
+        amenityImpactMap.put("air conditioning", BigDecimal.valueOf(5.0));
+        amenityImpactMap.put("dedicated workspace", BigDecimal.valueOf(4.0));
+        amenityImpactMap.put("hair dryer", BigDecimal.valueOf(1.0));
+        amenityImpactMap.put("kitchen", BigDecimal.valueOf(6.0));
+        amenityImpactMap.put("dryer", BigDecimal.valueOf(2.0));
+        amenityImpactMap.put("heating", BigDecimal.valueOf(4.0));
+        amenityImpactMap.put("tv", BigDecimal.valueOf(2.0));
+        amenityImpactMap.put("iron", BigDecimal.valueOf(1.0));
+        amenityImpactMap.put("pool", BigDecimal.valueOf(10.0));
+        amenityImpactMap.put("free parking", BigDecimal.valueOf(3.0));
+        amenityImpactMap.put("crib", BigDecimal.valueOf(1.5));
+        amenityImpactMap.put("bbq grill", BigDecimal.valueOf(2.5));
+        amenityImpactMap.put("indoor fireplace", BigDecimal.valueOf(3.0));
+        amenityImpactMap.put("hot tub", BigDecimal.valueOf(7.0));
+        amenityImpactMap.put("ev charger", BigDecimal.valueOf(2.0));
+        amenityImpactMap.put("gym", BigDecimal.valueOf(5.0));
+        amenityImpactMap.put("breakfast", BigDecimal.valueOf(3.5));
+        amenityImpactMap.put("smoking allowed", BigDecimal.valueOf(-1.0)); // Can be negative for some guests
+        amenityImpactMap.put("beachfront", BigDecimal.valueOf(15.0));
+        amenityImpactMap.put("ski-in/ski-out", BigDecimal.valueOf(8.0));
+        amenityImpactMap.put("waterfront", BigDecimal.valueOf(12.0));
+        amenityImpactMap.put("smoke alarm", BigDecimal.valueOf(0.5));
+        amenityImpactMap.put("carbon monoxide alarm", BigDecimal.valueOf(0.5));
     }
 
     public void createTables() {
@@ -162,6 +167,7 @@ public class DbConfig {
             createTableSql = "CREATE TABLE amenities (" +
                     "amenity_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
                     "amenity_name varchar(50)  NOT NULL UNIQUE," +
+                    "impact_on_revenue decimal(10,2)  NULL," +
                     "PRIMARY KEY (amenity_id)" +
                     ");";
             stmt = conn.prepareStatement(createTableSql);
@@ -253,11 +259,11 @@ public class DbConfig {
             stmt.close();
 
             // insert amenities
-            String insertAmenitySql = "INSERT INTO amenities (amenity_name) VALUES (?);";
+            String insertAmenitySql = "INSERT INTO amenities (amenity_name, impact_on_revenue) VALUES (?, ?);";
             stmt = conn.prepareStatement(insertAmenitySql);
-            for (String amenity : amenities) {
-                System.out.println(amenity);
-                stmt.setString(1, amenity);
+            for (var entry : amenityImpactMap.entrySet()) {
+                stmt.setString(1, entry.getKey());
+                stmt.setBigDecimal(2, entry.getValue());
                 stmt.executeUpdate();
             }
             stmt.close();
@@ -305,21 +311,6 @@ public class DbConfig {
     public void resetTables() {
         dropTables();
         createTables();
-    }
-
-    public List<Amenity> getAmenities() {
-        String sql = "SELECT * FROM amenities";
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-            ResultSet rs = stmt.executeQuery();
-            List<Amenity> amenities = new ArrayList<>();
-            while (rs.next()) {
-                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name")));
-            }
-            return amenities;
-        } catch (SQLException e) {
-            throw new DataAccessException("Error getting amenities", e);
-        }
     }
 
 }

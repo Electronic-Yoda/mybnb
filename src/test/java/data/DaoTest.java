@@ -137,6 +137,7 @@ class DaoTest {
         dao.deleteListing(retrievedListings.get(0).listing_id());
         assertFalse(dao.listingExists(retrievedListings.get(0)));
         dao.commitTransaction();
+        dbConfig.resetTables();
     }
 
     @org.junit.jupiter.api.Test
@@ -238,6 +239,7 @@ class DaoTest {
         // check if all availabilities were inserted
         assertTrue(dao.getAvailabilities().size() == 4);
 
+        dao.getAllAmenities().forEach(System.out::println);
         // insert amenities
         dao.insertAmenityForListing(listing_id1, "wifi");
         dao.insertAmenityForListing(listing_id1, "tv");
