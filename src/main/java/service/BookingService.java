@@ -227,6 +227,21 @@ public class BookingService {
         }
     }
 
+    public List<Booking> getBookingsOfHost(Long host_sin) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.userExists(host_sin)) {
+                throw new ServiceException(String.format("User with sin, %d, does not exist.", host_sin));
+            }
+            List<Booking> bookings = dao.getHostBookings(host_sin);
+            dao.commitTransaction();
+            return bookings;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve bookings."), e);
+        }
+    }
+
     public List<Booking> getBookingsOfUser(Long user_sin) throws ServiceException {
         try {
             dao.startTransaction();
