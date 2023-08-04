@@ -16,7 +16,7 @@ public class UserService {
         this.dao = dao;
     }
 
-    public void addUser(User user) throws ServiceException{
+    public Long addUser(User user) throws ServiceException{
         try {
             dao.startTransaction();  // Begin transaction
             if (dao.userExists(user.sin())) {
@@ -26,8 +26,9 @@ public class UserService {
                         )
                 );
             }
-            dao.insertUser(user);
+            Long sin = dao.insertUser(user);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
+            return sin;
         } catch (Exception e) {
             dao.rollbackTransaction();  // Rollback transaction if any operation failed
             throw new ServiceException("An error occurred while trying to add user", e);
@@ -61,6 +62,18 @@ public class UserService {
         } catch (Exception e) {
             dao.rollbackTransaction();  // Rollback transaction if any operation failed
             throw new ServiceException("An error occurred while trying to show users", e);
+        }
+    }
+
+    public boolean userExists(Long sin) throws ServiceException{
+        try {
+            dao.startTransaction();  // Begin transaction
+            boolean exists = dao.userExists(sin);
+            dao.commitTransaction();  // Commit transaction if all operations succeeded
+            return exists;
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occurred while trying to check if user exists", e);
         }
     }
 }

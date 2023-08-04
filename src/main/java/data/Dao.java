@@ -18,7 +18,7 @@ public class Dao {
     private final String username;
     private final String password;
     private static ThreadLocal<Connection> threadLocalConnection = new ThreadLocal<>();
-    
+
     public Dao(String url, String username, String password) {
         this.url = url;
         this.username = username;
@@ -138,9 +138,9 @@ public class Dao {
         return new SqlQuery(sql.toString(), parameters.toArray());
     }
 
-    public void insertUser(User user) {
+    public Long insertUser(User user) {
         try {
-            executeStatement(getInsertStatement(user, "users"));
+            return executeStatement(getInsertStatement(user, "users"));
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting user", e);
         }
@@ -287,7 +287,6 @@ public class Dao {
         } catch (SQLException e) {
             throw new DataAccessException("Error getting listings from host id");
         }
-
     }
 
     public boolean listingIdExists(Long listing_id) {
@@ -305,6 +304,48 @@ public class Dao {
             return executeListingQuery(query).get(0);
         } catch (SQLException e) {
             throw new DataAccessException("Error checking if listing_id exists", e);
+        }
+    }
+
+    public Float getListingPricePerNight(Long listing_id) {
+        SqlQuery query = new SqlQuery("SELECT price_per_night FROM availabilities INNER JOIN listings ON availabilities.listings_listing_id = listings.listing_id  WHERE listing_id = ?", listing_id);
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            stmt.setObject(1, listing_id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getFloat("price_per_night");
+            } else {
+                return null;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting listing price per night", e);
+        }
+    }
+
+    public Float getAverageListingPriceByCity(String city) {
+        SqlQuery query = new SqlQuery("SELECT AVG(price_per_night) FROM availabilities INNER JOIN listings ON availabilities.listings_listing_id = listings.listing_id  WHERE city = ?", city);
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            stmt.setObject(1, city);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getFloat("AVG(price_per_night)");
+            } else {
+                return null;
+            }
+        } catch (SQLException e) {
+            System.out.println(e);
+            throw new DataAccessException("Error getting average listing price by city", e);
+        }
+    }
+
+    public boolean doesCityExists(String city) {
+        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE city = ?", city);
+        try {
+            return !executeListingQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if city exists", e);
         }
     }
 
@@ -415,55 +456,71 @@ public class Dao {
         }
     }
 
-    public List<String> getAmenitiesByListingId(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT amenity_name FROM amenities " +
-                "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
-                "WHERE listing_amenities.listing_id = ?", listing_id);
+    private List<Amenity> executeAmenityQuery(SqlQuery query) throws SQLException {
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
-            stmt.setObject(1, listing_id);
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
             ResultSet rs = stmt.executeQuery();
-            List<String> amenities = new ArrayList<>();
+            List<Amenity> amenities = new ArrayList<>();
             while (rs.next()) {
-                amenities.add(rs.getString("amenity_name"));
+                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name"),
+                        rs.getBigDecimal("impact_on_revenue")));
             }
             return amenities;
+        }
+    }
+
+    public List<String> getAmenitiesByListingId(Long listing_id) {
+
+        SqlQuery query = new SqlQuery("SELECT * FROM amenities " +
+                "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
+                "WHERE listing_amenities.listing_id = ?", listing_id);
+        try {
+            List<Amenity> amenities = executeAmenityQuery(query);
+            List<String> amenityNames = new ArrayList<>();
+            for (Amenity amenity : amenities) {
+                amenityNames.add(amenity.amenity_name());
+            }
+            return amenityNames;
         } catch (SQLException e) {
-            throw new DataAccessException("Error getting listing amenities", e);
+            throw new DataAccessException("Error getting amenities by listing id", e);
+        }
+    }
+
+    public List<Amenity> getAllAmenities() {
+        SqlQuery query = new SqlQuery("SELECT * FROM amenities");
+        try {
+            return executeAmenityQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting all amenities", e);
         }
     }
 
     public Date getCurrentDate() {
         SqlQuery query = new SqlQuery("SELECT CURRENT_DATE()");
         Connection conn = threadLocalConnection.get();
-        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
 
-            ResultSet rs = stmt.executeQuery();
-            return rs.getDate(0);
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDate(1);
+                } else {
+                    throw new DataAccessException("No date returned");
+                }
+            }
         } catch (SQLException e) {
             throw new DataAccessException("Error getting date", e);
         }
     }
 
-    public boolean hasFutureBookings(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ?", listing_id);
+    public boolean hasFutureBookings(Long listing_id, LocalDate currentDate) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id = ? " +
+                "AND end_date >= ?", listing_id, currentDate);
 
         try {
-            List<Booking> bookings = executeBookingQuery(query);
-
-            // There are no bookings for this listing
-            if (bookings.isEmpty())
-                return false;
-
-            LocalDate current_Date = getCurrentDate().toLocalDate();
-
-            for (int i = 0; i < bookings.size(); i++) {
-                Booking booking = bookings.get(i);
-
-                if (booking.end_date().isAfter(current_Date))
-                    return true;
-            }
-            return false;
+            return !executeBookingQuery(query).isEmpty();
         } catch (SQLException e) {
             throw new DataAccessException("Error getting bookings with listing id, " + listing_id, e);
         }
@@ -697,7 +754,7 @@ public class Dao {
         }
     }
 
-    public void changeListingAvailability(long listing_id, LocalDate prevStartDate, LocalDate prevEndDate,
+    public void changeListingAvailability(Long listing_id, LocalDate prevStartDate, LocalDate prevEndDate,
             LocalDate newStartDate, LocalDate newEndDate) {
         SqlQuery query = new SqlQuery(
                 "UPDATE availabilities SET start_date = ?, end_date = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
@@ -709,13 +766,73 @@ public class Dao {
         }
     }
 
-    public void insertAmenityForListing(long listing_id, String amenityName) {
+    public void changeListingAvailabilityAndPrice(Long listing_id, LocalDate prevStartDate, LocalDate prevEndDate,
+                                          LocalDate newStartDate, LocalDate newEndDate, BigDecimal newPrice) {
+        SqlQuery query = new SqlQuery(
+                "UPDATE availabilities SET start_date = ?, end_date = ?, price_per_night = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
+                newStartDate, newEndDate, newPrice, listing_id, prevStartDate, prevEndDate);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating listing availabilities.", e);
+        }
+    }
+
+    public void changeListingAvailabilityPrice(Long listing_id, LocalDate start_date, LocalDate end_date, BigDecimal newPrice) {
+        SqlQuery query = new SqlQuery(
+                "UPDATE availabilities SET price_per_night = ? WHERE listings_listing_id = ? AND start_date = ? AND end_date = ?",
+                newPrice, listing_id, start_date, end_date);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error updating listing availabilities.", e);
+        }
+    }
+
+    private List<Amenity> executeListingAmenityQuery(SqlQuery query) throws SQLException {
+        Connection conn = threadLocalConnection.get();
+        try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Amenity> amenities = new ArrayList<>();
+            while (rs.next()) {
+                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name"),
+                        rs.getBigDecimal("impact_on_revenue")));
+            }
+            return amenities;
+        }
+    }
+
+    public void insertAmenityForListing(Long listing_id, String amenityName) {
         SqlQuery query = new SqlQuery("INSERT INTO listing_amenities (listing_id, amenity_id) " +
                 "VALUES (?, (SELECT amenity_id FROM amenities WHERE amenity_name = ?))", listing_id, amenityName);
         try {
             executeStatement(query);
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting amenity for listing", e);
+        }
+    }
+
+    public void deleteAmenityForListing(Long listing_id, String amenityName) {
+        SqlQuery query = new SqlQuery("DELETE FROM listing_amenities WHERE listing_id = ? AND amenity_id = " +
+                "(SELECT amenity_id FROM amenities WHERE amenity_name = ?)", listing_id, amenityName);
+        try {
+            executeStatement(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error deleting amenity for listing", e);
+        }
+    }
+
+    public boolean listingHasAmenity(Long listing_id, String amenityName) {
+        SqlQuery query = new SqlQuery("SELECT amenities.* FROM amenities " +
+                "JOIN listing_amenities ON amenities.amenity_id = listing_amenities.amenity_id " +
+                "WHERE listing_amenities.listing_id = ? AND amenities.amenity_name = ?", listing_id, amenityName);
+        try {
+            return !executeAmenityQuery(query).isEmpty();
+        } catch (SQLException e) {
+            throw new DataAccessException("Error checking if listing has amenity", e);
         }
     }
 
@@ -779,6 +896,15 @@ public class Dao {
     //         throw new DataAccessException("Error getting booking", e);
     //     }
     // }
+
+    public List<Booking> getTenenatBookings(Long tenant_sin) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE tenant_sin = ?", tenant_sin);
+        try {
+            return executeBookingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting tenant bookings", e);
+        }
+    }
 
     public boolean tenantSinMatchesBookingId(Long tenant_sin, Long booking_id) {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE tenant_sin = ? AND booking_id = ?", tenant_sin, booking_id);

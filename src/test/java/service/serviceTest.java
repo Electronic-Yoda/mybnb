@@ -97,7 +97,7 @@ public class serviceTest {
                 1L
         );
         try {
-            listingService.addAvailability(availability1);
+            listingService.addAvailability(availability1, 1L);
             availabilities = listingService.getAvailabilities();
         } catch (ServiceException e) {
             e.printStackTrace();
@@ -208,6 +208,7 @@ public class serviceTest {
         try {
             listingService.changeListingAvailability(
                     1L,
+                    1L,
                     LocalDate.parse("2023-09-10"),
                     LocalDate.parse("2023-09-20"),
                     LocalDate.parse("2023-09-12"),
@@ -281,9 +282,47 @@ public class serviceTest {
         assertTrue(reviews.get(0).comment_from_tenant().equals("Great Service!"));
         assertTrue(reviews.get(0).comment_from_host().equals("Great guest!"));
 
+        // change listing1 availability price
+        try {
+            listingService.changeListingAvailabilityPrice(
+                    1L,
+                    1L,
+                    LocalDate.parse("2023-09-15"),
+                    LocalDate.parse("2023-09-20"),
+                    new BigDecimal("400.00")
+            );
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Availability after changing availability price:");
+        list1Availabilities.forEach(System.out::println);
+        assertTrue(list1Availabilities.get(0).price_per_night().equals(new BigDecimal("400.00")));
 
+        // change current date to before booking end date
+        currentDate = LocalDate.parse("2023-09-14");
+        // try delete listing1
+        try {
+            listingService.deleteListing(1L, 1L, currentDate);
+        } catch (ServiceException e) {
+            // code should reach here since user2 cannot delete listing1
+            assertTrue(true);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
 
-
-
+        // change current date to after booking end date
+        currentDate = LocalDate.parse("2023-09-21");
+        // try delete listing1
+        try {
+            listingService.deleteListing(1L, 1L, currentDate);
+            listings = listingService.getListings();
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        assertTrue(listings.size() == 1);
+        dbConfig.resetTables();
     }
 }
