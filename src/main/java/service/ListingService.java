@@ -400,7 +400,7 @@ public class ListingService {
         }
     }
 
-    public void changeListingAvailability(long listingId, Long userSin, LocalDate prevStartDate, LocalDate prevEndDate,
+    public void changeListingAvailability(Long listingId, Long userSin, LocalDate prevStartDate, LocalDate prevEndDate,
             LocalDate newStartDate, LocalDate newEndDate) throws ServiceException {
         try {
             dao.startTransaction();
