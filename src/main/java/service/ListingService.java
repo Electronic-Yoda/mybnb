@@ -33,6 +33,12 @@ public class ListingService {
                                 "Unable to add listing because listing at %s, %s. %s already exists",
                                 listing.country(), listing.city(), listing.postal_code()));
             }
+            if (!dao.userExists(listing.users_sin())) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to add listing because user with sin, %d, doesn't exist",
+                                listing.users_sin()));
+            }
             Long listingID = dao.insertListing(listing);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
             return listingID;
