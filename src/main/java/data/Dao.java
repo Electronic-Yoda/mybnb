@@ -895,6 +895,16 @@ public class Dao {
         }
     }
 
+    public List<Booking> getHostBookings(Long host_sin) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id IN " +
+                "(SELECT listing_id FROM listings WHERE users_sin = ?)", host_sin);
+        try {
+            return executeBookingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting host bookings", e);
+        }
+    }
+
     public boolean tenantSinMatchesBookingId(Long tenant_sin, Long booking_id) {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE tenant_sin = ? AND booking_id = ?", tenant_sin, booking_id);
 

@@ -188,6 +188,33 @@ public class ListingService {
         }
     }
 
+    public void removeAmenityFromListing(Long listingID, Long userSin, String amenity) throws ServiceException {
+        try {
+            dao.startTransaction();
+            Listing listing = dao.getListingById(listingID);
+            if (listing == null) {
+                throw new ServiceException(
+                        String.format("Unable to remove amenity because listing with id, %d, doesn't exist", listingID));
+            }
+            if (!listing.users_sin().equals(userSin)) {
+                throw new ServiceException(
+                        String.format("Unable to remove amenity because listing with id, %d, doesn't belong to user with sin, %d", listingID, userSin));
+            }
+            if (!dao.listingHasAmenity(listing.listing_id(), amenity)) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to remove amenity because listing at %s, %s. %s doesn't have amenity %s",
+                                listing.country(), listing.city(), listing.postal_code(), amenity));
+            }
+            
+            dao.deleteAmenityForListing(listing.listing_id(), amenity);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while removing amenity", e);
+        }
+    }
+
     public Float getListingPricePerNight(Long listingId) throws ServiceException {
         try {
             dao.startTransaction();

@@ -168,10 +168,11 @@ public class ServiceCli {
             }
             return;
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
-
-
     }
 
     // Handler for the "create listing" command
@@ -237,7 +238,10 @@ public class ServiceCli {
                 System.out.println(e.getCause().getMessage());
             }
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
 
     }
@@ -291,7 +295,7 @@ public class ServiceCli {
 
             Long booking_id = bookingService.addBooking(booking);
 
-        System.out.printf("Created booking for listing: %s from: %s to %s\n Paid with card: %s using method: %s\n",
+        System.out.printf("Created booking for listing: %s from: %s to %s\nPaid with card: %s using method: %s\n",
                 listingId, availabilityStartDate,
                 availabilityEndDate, cardNumber, paymentMethod);
 
@@ -303,10 +307,11 @@ public class ServiceCli {
                 System.out.println(e.getCause().getMessage());
             }
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
-
-
     }
 
     // Handler for the "login user" command
@@ -341,7 +346,10 @@ public class ServiceCli {
                 System.out.println(e.getCause().getMessage());
             }
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
     }
 
@@ -363,6 +371,9 @@ public class ServiceCli {
         switch (subCommand) {
             case "availability":
                 handleAddAvailability(args);
+                break;
+            case "amenity":
+                handleAddAmenity(args);
                 break;
             // TODO: Add other "add" sub-commands handlers here, if needed
             default:
@@ -466,9 +477,54 @@ public class ServiceCli {
             }
             return;
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
     }
+
+    public void handleAddAmenity(String[] args) {
+        if (!checkUserLoggedIn())
+            return;
+
+        try {
+            Options options = new Options();
+            options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
+            
+            CommandLineParser parser = new DefaultParser();
+            CommandLine cmd = parser.parse(options, args);
+
+            String listingId = cmd.getOptionValue("l");
+
+            // Check if listing exists
+            if (!listingService.doesListingExist(Long.parseLong(listingId))) {
+                System.out.println("Listing does not exist");
+                return;
+            }
+
+            // Check if user is host of listing
+            if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
+                System.out.println("User is not host of listing");
+                return;
+            }
+
+            amenityAdderRoutine(Long.parseLong(listingId));
+
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+            System.out.println(e.getCause().getMessage());
+            }
+            return;
+        } catch (org.apache.commons.cli.ParseException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
+    }
+
 
     // Handler for the "remove" command
     private void handleRemoveCommand(String subCommand, String[] args) {
@@ -530,8 +586,15 @@ public class ServiceCli {
             
         } catch (ServiceException e) {
             System.out.println(e.getMessage());
+
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
     }
 
@@ -540,6 +603,9 @@ public class ServiceCli {
         switch (subCommand) {
             case "listing":
                 handleDeleteListing(args);
+                break;
+            case "amenity":
+                handleDeleteAmenity(args);
                 break;
             // TODO: Add other "delete" sub-commands handlers here, if needed
             default:
@@ -583,7 +649,55 @@ public class ServiceCli {
                 System.out.println(e.getCause().getMessage());
             }
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
+    }
+
+    public void handleDeleteAmenity(String[] args) {
+        if (!checkUserLoggedIn())
+            return;
+
+        try {
+            Options options = new Options();
+            options.addOption(Option.builder("l").longOpt("listing-id").hasArg().required().desc("listing id").build());
+            options.addOption(Option.builder("a").longOpt("amenity").hasArg().required().desc("amenity").build());
+
+            CommandLineParser parser = new DefaultParser();
+            CommandLine cmd = parser.parse(options, args);
+
+            String listingId = cmd.getOptionValue("l");
+            String amenity = cmd.getOptionValue("a").replaceAll("_", " ");
+
+            // Check if listing exists
+            if (!listingService.doesListingExist(Long.parseLong(listingId))) {
+                System.out.println("Listing does not exist");
+                return;
+            }
+
+            // Check if user is host of listing
+            if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
+                System.out.println("User is not host of listing");
+                return;
+            }
+
+            // delete amenity
+            listingService.removeAmenityFromListing(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin), amenity);
+            System.out.printf("Deleted amenity: %s for listing: %s\n", amenity, listingId);
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        } catch (org.apache.commons.cli.ParseException e) {
+            System.out.println(e.getMessage());
+
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
     }
 
@@ -596,13 +710,13 @@ public class ServiceCli {
             case "mybookings":
                 handleShowMyBookings(args);
                 break;
-            // TODO: Add other "show" sub-commands handlers here, if needed
             case "amenities":
                 handleShowAmenities(args);
                 break;
             case "availabilities":
                 handleShowAvailability(args);
                 break;
+            // TODO: Add other "show" sub-commands handlers here, if needed
             default:
                 System.out.println("Unknown sub-command for 'show': " + subCommand);
                 break;
@@ -639,9 +753,8 @@ public class ServiceCli {
         if (!checkUserLoggedIn())
             return;
 
-        System.out.println("My Bookings:");
-        
         try {
+            System.out.println("My Bookings (as a Tenant):");
             List<Booking> bookings = bookingService.getBookingsOfUser(Long.parseLong(logged_in_user_sin));
 
             for (Booking booking : bookings) {
@@ -650,6 +763,14 @@ public class ServiceCli {
                 System.out.println(bookingString);
             }
 
+            System.out.println("My Bookings (as a Host):");
+            bookings = bookingService.getBookingsOfHost(Long.parseLong(logged_in_user_sin));
+
+            for (Booking booking : bookings) {
+                String bookingString = String.format("Booking id: %s, Start date: %s, End date: %s, Booking date: %s, Amount: %s, Tenant SIN: %s, Listing id: %s",
+                        booking.booking_id(), booking.start_date(), booking.end_date(), booking.transaction_date(), booking.amount(), booking.tenant_sin(), booking.listings_listing_id());
+                System.out.println(bookingString);
+            }
         } catch (ServiceException e) {
             System.out.println(e.getMessage());
             if (e.getCause() != null) {
@@ -682,7 +803,10 @@ public class ServiceCli {
         } catch (ServiceException e) {
             System.out.println(e.getMessage());
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
     }
 
@@ -704,13 +828,19 @@ public class ServiceCli {
 
             System.out.println("Availabilities for listing id: " + listingId);
             for (Availability availability : availabilities) {
-                System.out.println(availability);
+                // System.out.println(availability);
+                String availabilityString = String.format("Availability id: %s, Start date: %s, End date: %s, Price per night: %s, Listing id: %s",
+                        availability.availability_id(), availability.start_date(), availability.end_date(), availability.price_per_night(), availability.listings_listing_id());
+                System.out.println(availabilityString);
             }
 
         } catch (ServiceException e) {
             System.out.println(e.getMessage());
         } catch (org.apache.commons.cli.ParseException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         }
     }
 
@@ -844,13 +974,13 @@ public class ServiceCli {
             amenity = amenity.toLowerCase();
             try {
                 listingService.addAmenityToListing(listingID, Long.parseLong(logged_in_user_sin), amenity);
+                System.out.println("Amenity added: " + amenity + ". Expected revenue increase: " + amenities.get(amenity) + "%");
             } catch (ServiceException e) {
                 System.out.println(e.getMessage());
                 if (e.getCause() != null) {
                     System.out.println(e.getCause().getMessage());
                 }
             }
-            System.out.println("Amenity added: " + amenity + ". Expected revenue increase: " + amenities.get(amenity) + "%");
         }
     }
 
