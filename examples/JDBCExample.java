@@ -92,8 +92,20 @@ public class JDBCExample {
 
     // Method to generate a random name
     public static String getRandomName() {
-        String[] names = {"John", "Jane", "Bob", "Alice", "Tom", "Lucy"};
-        String[] surnames = {"Doe", "Smith", "Johnson", "Brown", "Taylor", "Green"};
+        String[] names = {
+                "John", "Jane", "Bob", "Alice", "Tom", "Lucy",
+                "David", "Emily", "Michael", "Sara", "Brian", "Rebecca",
+                "Chris", "Laura", "Mark", "Katie", "James", "Jennifer",
+                "Robert", "Anna", "Joseph", "Ella", "William", "Megan",
+                "Richard", "Olivia", "Henry", "Sophia", "Peter", "Grace"
+        };
+        String[] surnames = {
+                "Doe", "Smith", "Johnson", "Brown", "Taylor", "Green",
+                "Jones", "Clark", "Wilson", "Miller", "Hall", "White",
+                "Lewis", "Harris", "Walker", "Young", "Nelson", "Carter",
+                "Mitchell", "Allen", "Wright", "Adams", "Baker", "Hill",
+                "Moore", "Roberts", "King", "Jackson", "Davis", "Parker"
+        };
 
         Random random = new Random();
         String name = names[random.nextInt(names.length)];
