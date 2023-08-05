@@ -886,17 +886,6 @@ public class Dao {
         }
     }
 
-    // public Long getBookingId(Long listingId, LocalDate startDate, LocalDate endDate, Long host_sin, Long tenant_sin) {
-    //     SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listing_id = ? AND start_date = ? AND end_date = ? AND tenant_sin = ?",
-    //                                     listingId, startDate, endDate, tenant_sin);
-    //     try {
-    //         Booking booking = executeBookingQuery(query).get(0);
-    //         return booking.booking_id();
-    //     } catch (SQLException e) {
-    //         throw new DataAccessException("Error getting booking", e);
-    //     }
-    // }
-
     public List<Booking> getTenenatBookings(Long tenant_sin) {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE tenant_sin = ?", tenant_sin);
         try {

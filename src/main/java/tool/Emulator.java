@@ -1,4 +1,4 @@
-package tools;
+package tool;
 
 import com.github.javafaker.Faker;
 import com.google.gson.Gson;
@@ -8,7 +8,6 @@ import com.google.maps.GeoApiContext;
 import com.google.maps.GeocodingApi;
 import com.google.maps.model.AddressComponent;
 import com.google.maps.model.AddressComponentType;
-import com.google.maps.model.AddressType;
 import com.google.maps.model.GeocodingResult;
 import data.Dao;
 import data.DbConfig;

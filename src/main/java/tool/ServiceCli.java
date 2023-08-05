@@ -1,8 +1,7 @@
-package tools;
+package tool;
 
 import data.Dao;
 import domain.*;
-import exception.DataAccessException;
 import exception.ServiceException;
 import service.BookingService;
 import service.ListingService;
@@ -39,7 +38,7 @@ public class ServiceCli {
     private final BookingService bookingService = new BookingService(dao);
     private String logged_in_user_sin = "";
 
-    public void run() {
+    public void start() {
         try {
             Terminal terminal = TerminalBuilder.terminal();
 
@@ -858,6 +857,6 @@ public class ServiceCli {
     public static void main(String[] args) throws ClassNotFoundException {
         ConsoleLogger.setup();
         ServiceCli serviceCli = new ServiceCli();
-        serviceCli.run();
+        serviceCli.start();
     }
 }
