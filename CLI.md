@@ -177,3 +177,6 @@ Show all amenities for listing.
 
 ## Quit
 quit
+
+**Description:** \
+Quit console.
