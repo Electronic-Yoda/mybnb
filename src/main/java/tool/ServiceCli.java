@@ -142,14 +142,13 @@ public class ServiceCli {
                     Option.builder("o").longOpt("occupation").hasArg().required().desc("user occupation").build());
 
             CommandLineParser parser = new DefaultParser();
-
             CommandLine cmd = parser.parse(options, args);
 
             String userSin = cmd.getOptionValue("s");
             String userName = cmd.getOptionValue("n").replaceAll("_", " ");
             String userAddress = cmd.getOptionValue("a").replaceAll("_", " ");
             String userBirthdate = cmd.getOptionValue("b");
-            String userOccupation = cmd.getOptionValue("o");
+            String userOccupation = cmd.getOptionValue("o").replaceAll("_", " ");
 
             if (!isValidDate(userBirthdate)) {
                 System.out.println("Birthdate must be in format YYYY-MM-DD");
@@ -332,6 +331,8 @@ public class ServiceCli {
                 CommandLineParser parser = new DefaultParser();
                 CommandLine cmd = parser.parse(options, args);
                 String userSin = cmd.getOptionValue("s");
+
+                // help option
 
 
                 if (!userService.userExists(Long.parseLong(userSin))) {
