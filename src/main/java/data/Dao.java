@@ -713,8 +713,10 @@ public class Dao {
         }
     }
 
-    public List<Availability> getAvailabilitiesOfListing(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT * FROM availabilities WHERE listings_listing_id = ?", listing_id);
+    public List<Availability> getAvailabilitiesOfListing(Long listing_id, LocalDate currentDate) {
+//        SqlQuery query = new SqlQuery("SELECT * FROM availabilities WHERE listings_listing_id = ?", listing_id);
+        SqlQuery query = new SqlQuery("SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date >= ?",
+                listing_id, currentDate);
         try {
             return executeAvailabilityQuery(query);
         } catch (SQLException e) {

@@ -12,6 +12,9 @@ import com.google.maps.model.GeocodingResult;
 import data.Dao;
 import data.DbConfig;
 import domain.*;
+import mylogger.ConsoleLogger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import service.BookingService;
 import service.ListingService;
 import service.UserService;
@@ -22,6 +25,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -33,6 +37,8 @@ public class Emulator {
     private final UserService userService;
     private final ListingService listingService;
     private final BookingService bookingService;
+
+    private static final Logger logger = LogManager.getLogger(Emulator.class);
 
     String[] occupations = {
             "Engineer", "Doctor", "Teacher", "Programmer", "Nurse", "Lawyer",
@@ -168,7 +174,30 @@ public class Emulator {
             "ByWard Market, Ottawa, ON",
             "Notre-Dame Cathedral Basilica, Ottawa, ON",
             "Peace Tower, Ottawa, ON",
+            "Mcdonalds, San Francisco, CA",
+            "Tim Hortons, San Francisco, CA",
+            "Subway, San Francisco, CA",
+            "Pizza Pizza, San Francisco, CA",
+            "Pizza Hut, San Francisco, CA",
+            "Popeyes, San Francisco, CA",
+            "Mcdonalds, San Jose, CA",
+            "Tim Hortons, San Jose, CA",
+            "Subway, San Jose, CA",
+            "Pizza Pizza, San Jose, CA",
             // Add more specific locations as needed
+    };
+
+    String[] commercialHostAddresses = {
+        "Mcdonalds, San Francisco, CA",
+        "Tim Hortons, San Francisco, CA",
+        "Subway, San Francisco, CA",
+        "Pizza Pizza, San Francisco, CA",
+        "Pizza Hut, San Francisco, CA",
+        "Popeyes, San Francisco, CA",
+        "Mcdonalds, San Jose, CA",
+        "Tim Hortons, San Jose, CA",
+        "Subway, San Jose, CA",
+        "Pizza Pizza, San Jose, CA",
     };
 
     String[] listingTypes = {
@@ -178,7 +207,7 @@ public class Emulator {
             "Hotel"
     };
 
-    int maxNumberOfListings = 10;
+    int maxNumberOfListings = 40;
     int minNumberOfListings = 1;
 
     public Emulator() {
@@ -245,8 +274,14 @@ public class Emulator {
                         && addressIterator.hasNext(); j++) {
                     // Generate listing details using Geocoding API for real locations in Toronto
                     GeocodingResult result = addressIterator.next();
+                    String city = null;
+                    String country = null;
                     for (AddressComponent component : result.addressComponents) {
-                        if (Arrays.asList(component.types).contains(AddressComponentType.POSTAL_CODE)) {
+                        if (Arrays.asList(component.types).contains(AddressComponentType.LOCALITY)) {
+                            city = component.longName;
+                        } else if (Arrays.asList(component.types).contains(AddressComponentType.COUNTRY)) {
+                            country = component.longName;
+                        } else if (Arrays.asList(component.types).contains(AddressComponentType.POSTAL_CODE)) {
                             String postalCode = component.shortName;
                             Listing listing = new Listing(
                                     null, // listing_id can be generated based on your logic
@@ -254,16 +289,14 @@ public class Emulator {
                                     result.formattedAddress,
                                     postalCode,
                                     new Point2D.Double(result.geometry.location.lng, result.geometry.location.lat),
-                                    "Toronto",
-                                    "Canada",
+                                    city,  // Set real city
+                                    country,  // Set real country
                                     sin
                             );
-
                             // Convert listing to JSON and add to the array
                             listings.add(listing);
                         }
                     }
-
                 }
             }
             Gson gson = getGson();
@@ -272,11 +305,11 @@ public class Emulator {
             String listingsJson = gson.toJson(listings);
 
             // Write JSON array to file
-            System.out.println("Number of users: " + users.size());
+            logger.info("Number of users: " + users.size());
             try (FileWriter file = new FileWriter(userFilePath)) {
                 file.write(usersJson);
             }
-            System.out.println("Number of listings: " + listings.size());
+            logger.info("Number of listings: " + listings.size());
             try (FileWriter file = new FileWriter(listingFilePath)) {
                 file.write(listingsJson);
             }
@@ -305,7 +338,7 @@ public class Emulator {
         }
     }
 
-    public void loadDataToDatabase(String userFilePath, String listingFilePath) {
+    public void loadDataToDatabase(String userFilePath, String listingFilePath, LocalDate dateToBegin) {
         try {
             Gson gson = getGson();
             String usersJson = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(userFilePath)));
@@ -320,10 +353,10 @@ public class Emulator {
                 try {
                     listingService.addListing(listing);
                 } catch (Exception e) {
-                    System.out.println("Emulator: Did not add listing: " + listing);
-                    System.out.println(e.getMessage());
+                    logger.info("Emulator: Did not add listing: " + listing);
+                    logger.info(e.getMessage());
                     if (e.getCause() != null) {
-                        System.out.println(e.getCause().getMessage());
+                        logger.info(e.getCause().getMessage());
                     }
                 }
             }
@@ -344,25 +377,243 @@ public class Emulator {
             Random random = new Random();
             // add availabilities
             for (Listing listing : listings) {
-                LocalDate startDate = LocalDate.of(2023, 8, 1);
-                int plusDays = random.nextInt(30) + 1;
-                LocalDate endDate = startDate.plusDays(plusDays);
-                for (int i = 0; i < random.nextInt(20); i++) {
-                    Availability availability = new Availability(
+//                LocalDate startDate = dateToBegin;
+//                int plusDays = random.nextInt(30) + 1;
+//                LocalDate endDate = startDate.plusDays(plusDays);
+////                for (int i = 0; i < random.nextInt(20); i++) {
+//                for (int i = 0; i < 20; i++) {
+//                    Availability availability = new Availability(
+//                            null,
+//                            startDate,
+//                            endDate,
+//                            new BigDecimal(random.nextInt(700) + 50),
+//                            listing.listing_id()
+//                    );
+//                    try {
+//                        listingService.addAvailability(availability, listing.users_sin(), dateToBegin);
+//                    } catch (Exception e) {
+//                        logger.info("Emulator: Did not add availability: " + availability);
+//                    }
+//                    startDate = endDate.plusDays(random.nextInt(2) + 1);
+////                    plusDays = random.nextInt(50) + 10;
+//                    plusDays = 50;
+//                    endDate = startDate.plusDays(plusDays);
+//                }
+
+                // Simply make listing available for the entire year
+                LocalDate startDate = dateToBegin;
+                LocalDate endDate = dateToBegin.plusDays(365);
+                Availability availability = new Availability(
+                        null,
+                        startDate,
+                        endDate,
+                        new BigDecimal(random.nextInt(400) + 30).setScale(2, RoundingMode.HALF_UP),
+                        listing.listing_id()
+                );
+                try {
+                    listingService.addAvailability(availability, listing.users_sin(), dateToBegin);
+                } catch (Exception e) {
+                    logger.info("Emulator: Did not add availability: " + availability);
+                }
+            }
+
+            // Loop through each user and have each user randomly book listings
+            Collections.shuffle(users);
+            for (User user : users) {
+                // Get a random number of bookings for this user
+                int numBookings = random.nextInt(10);
+                // Get a random list of listings for this user to book
+                List<Listing> listingsToBook = new ArrayList<>(listings);
+                Collections.shuffle(listingsToBook);
+                listingsToBook = listingsToBook.subList(0, numBookings);
+                // Loop through each listing and create a booking
+                for (Listing listing : listingsToBook) {
+                    // Get a random start date
+//                    LocalDate startDate = dateToBegin;
+                    LocalDate startDate = dateToBegin.plusDays(random.nextInt(300));
+                    int plusDays = random.nextInt(10) + 1;
+                    LocalDate endDate = startDate.plusDays(plusDays);
+                    // Create the booking
+                    Booking booking = new Booking(
                             null,
                             startDate,
                             endDate,
-                            new BigDecimal(random.nextInt(700) + 50),
+                            dateToBegin,
+                            null,
+                            List.of("visa", "mastercard", "american_express").get(random.nextInt(3)),
+                            random.nextLong(111111111) + 100000000,
+                            user.sin(),
                             listing.listing_id()
                     );
                     try {
-                        listingService.addAvailability(availability, listing.users_sin());
+                        bookingService.addBooking(booking);
                     } catch (Exception e) {
-                        System.out.println("Emulator: Did not add availability: " + availability);
+                        logger.info("Emulator: Did not book: " + booking);
+                        logger.info(e.getMessage());
+                        if (e.getCause() != null) {
+                            logger.info(e.getCause().getMessage());
+                        }
                     }
-                    startDate = endDate.plusDays(random.nextInt(15) + 1);
-                    plusDays = random.nextInt(30) + 1;
-                    endDate = startDate.plusDays(plusDays);
+                }
+            }
+            List<Booking> bookings = bookingService.getBookings();
+            // cancel some bookings
+            // Loop through each user and have each user randomly cancel bookings
+            Collections.shuffle(users);
+            for (User user : users) {
+                // Get the bookings for this user
+                List<Booking> userBookings = bookingService.getBookingsOfUser(user.sin());
+                if (userBookings.isEmpty()) {
+                    continue;
+                }
+                // Get a random number of bookings to cancel
+                int numBookingsToCancel = random.nextInt(userBookings.size());
+                // Get a random list of bookings to cancel
+                List<Booking> bookingsToCancel = new ArrayList<>(userBookings);
+                Collections.shuffle(bookingsToCancel);
+                bookingsToCancel = bookingsToCancel.subList(0, numBookingsToCancel);
+                // Loop through each booking and cancel it
+                for (Booking booking : bookingsToCancel) {
+                    try {
+                        // Either tenant or host can cancel. 50% chance of each
+                        if (Math.random() < 0.5) {
+                            bookingService.tenantCancelBooking(booking.booking_id(), user.sin(), dateToBegin);
+                        } else {
+                            // We need to find the host id for this listing
+                            Long hostId = listingService.getListing(booking.listings_listing_id()).users_sin();
+                            bookingService.hostCancelBooking(booking.booking_id(), hostId, dateToBegin);
+                        }
+                    } catch (Exception e) {
+                        logger.info("Emulator: Did not cancel booking: " + booking);
+                        logger.info(e.getMessage());
+                        if (e.getCause() != null) {
+                            logger.info(e.getCause().getMessage());
+                        }
+//                        e.printStackTrace();
+                    }
+                }
+            }
+
+            // add reviews
+            // create a review map where key is 1 to 5 and value is a list of unique noun phrases corresponding to that rating
+            Map<Integer, List<String>> reviewMap = new HashMap<>();
+            reviewMap.put(1, List.of(
+                    "Terrible place",
+                    "Horrible place",
+                    "Awful environment",
+                    "Beyond terrible place"
+            ));
+            reviewMap.put(2, List.of(
+                    "Bad place",
+                    "Unpleasant place",
+                    "Unsatisfactory place",
+                    "Unpleasant environment",
+                    "Unsatisfactory environment"
+            ));
+            reviewMap.put(3, List.of(
+                    "Okay place",
+                    "Average place",
+                    "Satisfactory place",
+                    "Okay environment",
+                    "Average environment"
+            ));
+            reviewMap.put(4, List.of(
+                    "Good place",
+                    "Great place",
+                    "Excellent place",
+                    "Good environment",
+                    "Satisfactory environment"
+            ));
+            reviewMap.put(5, List.of(
+                    "Amazing place",
+                    "Wonderful place",
+                    "Fantastic place",
+                    "Amazing environment",
+                    "best environment"
+            ));
+
+            // Note: before adding reviews, we need to fake the time so that the bookings are in the past
+            // This is because the booking service will not allow reviews to be added for bookings in the future
+            for (Listing listing : listings) {
+                LocalDate currentDate = LocalDate.of(2022, 1, 1);
+                for (int i = 0; i < 6; i++) {
+                    // add availability for this listing
+                    Availability availability = new Availability(
+                            null,
+                            currentDate,
+                            currentDate.plusDays(random.nextInt(20) + 1),
+                            new BigDecimal(String.valueOf(random.nextInt(400) + 30)).setScale(2, RoundingMode.HALF_UP),
+                            listing.listing_id()
+                    );
+                    currentDate = availability.end_date().plusDays(random.nextInt(10) + 1);
+                    try {
+                        listingService.addAvailability(availability, listing.users_sin(), availability.start_date());
+                        // also add a booking for this availability
+                        // Get a random user as the tenant
+                        User user = users.get(random.nextInt(users.size()));
+                        Booking booking = new Booking(
+                                null,
+                                availability.start_date(),
+                                availability.end_date(),
+                                availability.start_date(),
+                                null,
+                                List.of("visa", "mastercard", "american_express").get(random.nextInt(3)),
+                                random.nextLong(111111111) + 100000000,
+                                user.sin(),
+                                listing.listing_id()
+                        );
+                        Long bookingID = bookingService.addBooking(booking);
+                        // get the booking because it has the booking id
+
+                        // also add a review for this booking
+                        // get a random rating from the review map
+                        int randomIndex = random.nextInt(5);
+                        int rating = new ArrayList<>(reviewMap.keySet()).get(randomIndex);
+                        String reviewText = reviewMap.get(rating).get(random.nextInt(reviewMap.get(rating).size()));
+                        // get tenant id and host id
+                        Long tenantID = user.sin();
+                        Long hostID = listingService.getListing(listing.listing_id()).users_sin();
+                        // change the current date to be after the booking date
+                        LocalDate bookingEndDate = availability.end_date().plusDays(1);
+                        // add the review
+                        bookingService.tenantRateListing(
+                                tenantID,
+                                rating,
+                                bookingID,
+                                bookingEndDate
+                        );
+                        bookingService.tenantRateHost(
+                                tenantID,
+                                rating,
+                                bookingID,
+                                bookingEndDate
+                        );
+                        bookingService.addCommentFromTenant(
+                                tenantID,
+                                reviewText,
+                                bookingID,
+                                bookingEndDate
+                        );
+                        bookingService.addCommentFromHost(
+                                hostID,
+                                "Nice tenant",
+                                bookingID,
+                                bookingEndDate
+                        );
+                        bookingService.hostRateTenant(
+                                hostID,
+                                rating,
+                                bookingID,
+                                bookingEndDate
+                        );
+
+                    } catch (Exception e) {
+                        logger.info("Emulator: Did not add one fake review");
+                        logger.info(e.getMessage());
+                        if (e.getCause() != null) {
+                            logger.info(e.getCause().getMessage());
+                        }
+                    }
                 }
             }
         } catch (Exception e) {
@@ -375,7 +626,7 @@ public class Emulator {
         String emulatorDataDir = Paths.get(currentDirectory, "emulator_data").toString();
         String userFilePath = Paths.get(emulatorDataDir, "users.json").toString();
         String listingFilePath = Paths.get(emulatorDataDir, "listings.json").toString();
-        loadDataToDatabase(userFilePath, listingFilePath);
+        loadDataToDatabase(userFilePath, listingFilePath, LocalDate.of(2023, 8, 1));
     }
 
     public void showLoadedData() {
@@ -388,14 +639,19 @@ public class Emulator {
                 System.out.println("Amenities:");
                 listingService.getAmenitiesOfListing(listing.listing_id()).forEach(System.out::println);
                 System.out.println("Availabilities:");
-                listingService.getAvailabilitiesOfListing(listing.listing_id()).forEach(System.out::println);
+                listingService.getAvailabilitiesOfListing(listing.listing_id(), LocalDate.of(2023, 7, 20)).forEach(System.out::println);
+                System.out.println("Reviews:");
+                bookingService.getReviewsOfListing(listing.listing_id()).forEach(System.out::println);
             }
+            System.out.println("Cancelled Bookings:");
+            bookingService.getCancelledBookings().forEach(System.out::println);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     public static void main(String[] args) {
+        ConsoleLogger.setup();
         Emulator emulator = new Emulator();
 //        emulator.generateUserAndListingFiles();
 

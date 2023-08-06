@@ -456,9 +456,9 @@ public class ServiceCli {
 
             // add availability
             Availability availability = new Availability(null, LocalDate.parse(availabilityStartDate),
-                    LocalDate.parse(availabilityEndDate), new BigDecimal(pricePerNight), Long.parseLong(listingId));
+                    LocalDate.parse(availabilityEndDate), new BigDecimal(pricePerNight).setScale(2), Long.parseLong(listingId));
 
-            listingService.addAvailability(availability, Long.parseLong(logged_in_user_sin));
+            listingService.addAvailability(availability, Long.parseLong(logged_in_user_sin), LocalDate.now());
             System.out.printf("Added availability for listing: %s from: %s to %s\nprice per night: %s\n", listingId,
                     availabilityStartDate,
                     availabilityEndDate, pricePerNight);
@@ -810,7 +810,7 @@ public class ServiceCli {
 
             String listingId = cmd.getOptionValue("l");
 
-            List<Availability> availabilities = listingService.getAvailabilitiesOfListing(Long.parseLong(listingId));
+            List<Availability> availabilities = listingService.getAvailabilitiesOfListing(Long.parseLong(listingId), LocalDate.now());
 
             System.out.println("Availabilities for listing id: " + listingId);
             for (Availability availability : availabilities) {
@@ -880,7 +880,6 @@ public class ServiceCli {
             options.addOption(Option.builder("a").longOpt("amenities").hasArg()
                     .desc("amenities (input a list of amenities, separated by comma followed by a space").build());
 
-            options.addOption("h", "help", false, "show help.");
 
             CommandLineParser parser = new DefaultParser();
             CommandLine cmd = parser.parse(options, args);

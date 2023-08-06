@@ -297,7 +297,7 @@ public class ListingService {
         }
     }
 
-    public void addAvailability(Availability availability, Long userSin) throws ServiceException {
+    public void addAvailability(Availability availability, Long userSin, LocalDate currentDate) throws ServiceException {
         try {
             dao.startTransaction();
             Listing listing = dao.getListingById(availability.listings_listing_id());
@@ -309,7 +309,7 @@ public class ListingService {
                 throw new ServiceException(
                         String.format("Unable to add availability because listing with id, %d, doesn't belong to user with sin, %d", availability.listings_listing_id(), userSin));
             }
-            if (doesDateOverlapWithExistingAvailability(availability)) {
+            if (doesDateOverlapWithExistingAvailability(availability, currentDate)) {
                 throw new ServiceException(
                         String.format(
                                 "Unable to add availability because availability overlaps with existing availability",
@@ -372,7 +372,7 @@ public class ListingService {
 
     // Helper method to check if date range overlaps with existing availability
     // Note: we do not use start and commit transaction here because this method is used within a transaction
-    private boolean doesDateOverlapWithExistingAvailability(Availability availability) throws ServiceException {
+    private boolean doesDateOverlapWithExistingAvailability(Availability availability, LocalDate currentDate) throws ServiceException {
         try {
             // Check if listing exists
             if (!dao.listingIdExists(availability.listings_listing_id())) {
@@ -388,7 +388,7 @@ public class ListingService {
                                 availability.start_date(), availability.end_date()));
             }
 
-            List<Availability> availabilities = dao.getAvailabilitiesOfListing(availability.listings_listing_id());
+            List<Availability> availabilities = dao.getAvailabilitiesOfListing(availability.listings_listing_id(), currentDate);
 
             for (int i = 0; i<availabilities.size(); i++) {
                 // Check if date range overlaps with existing availability
@@ -469,7 +469,7 @@ public class ListingService {
         }
     }
 
-    public List<Availability> getAvailabilitiesOfListing(Long listing_id) throws ServiceException {
+    public List<Availability> getAvailabilitiesOfListing(Long listing_id, LocalDate currentDate) throws ServiceException {
         try {
             dao.startTransaction();  // Begin transaction
             if (!dao.listingIdExists(listing_id)) {
@@ -477,7 +477,7 @@ public class ListingService {
                         String.format("Unable to get availabilities because listing with id, %d, doesn't exist",
                                 listing_id));
             }
-            List<Availability> availabilities = dao.getAvailabilitiesOfListing(listing_id);
+            List<Availability> availabilities = dao.getAvailabilitiesOfListing(listing_id, currentDate);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
             return availabilities;
         } catch (Exception e) {

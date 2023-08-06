@@ -95,7 +95,7 @@ public class serviceTest {
                 1L
         );
         try {
-            listingService.addAvailability(availability1, 1L);
+            listingService.addAvailability(availability1, 1L, LocalDate.of(2023, 7, 20));
             availabilities = listingService.getAvailabilities();
         } catch (ServiceException e) {
             e.printStackTrace();
@@ -136,7 +136,7 @@ public class serviceTest {
         System.out.println("Availability after booking:");
         List<Availability> list1Availabilities = null;
         try {
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
@@ -193,7 +193,7 @@ public class serviceTest {
         // check if availability is updated
         System.out.println("Availability after cancelling booking:");
         try {
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
@@ -212,7 +212,7 @@ public class serviceTest {
                     LocalDate.parse("2023-09-12"),
                     LocalDate.parse("2023-09-20")
             );
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
@@ -242,7 +242,7 @@ public class serviceTest {
         // check if availability is updated
         System.out.println("Availability after booking:");
         try {
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
@@ -289,7 +289,7 @@ public class serviceTest {
                     LocalDate.parse("2023-09-20"),
                     new BigDecimal("400.00")
             );
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
