@@ -6,12 +6,15 @@ import exception.DataAccessException;
 import filter.ListingFilter;
 import filter.UserFilter;
 
+import java.awt.geom.Point2D;
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Dao {
     private final String url;
@@ -89,7 +92,12 @@ public class Dao {
         Connection conn = threadLocalConnection.get(); // Note: this is the thread-local connection! We close this at the end of the transaction
         try (PreparedStatement stmt = conn.prepareStatement(query.sql(), Statement.RETURN_GENERATED_KEYS)) {
             for (int i = 0; i < query.parameters().length; i++) {
-                stmt.setObject(i + 1, query.parameters()[i]);
+                if (query.parameters()[i] instanceof Point2D) {
+                    String pointWkt = String.format("POINT(%f %f)", ((Point2D) query.parameters()[i]).getX(), ((Point2D) query.parameters()[i]).getY());
+                    stmt.setString(i + 1, pointWkt);
+                } else {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
             }
             stmt.executeUpdate();
             try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
@@ -102,6 +110,7 @@ public class Dao {
         }
     }
 
+    // Note: will not work for geometry types
     private SqlQuery getInsertStatement(Object domainObject, String tableName) {
         StringBuilder sql = new StringBuilder("INSERT INTO ");
         sql.append(tableName + " (");
@@ -236,10 +245,17 @@ public class Dao {
             ResultSet rs = stmt.executeQuery();
             List<Listing> listings = new ArrayList<>();
             while (rs.next()) {
+                String wkt = rs.getString("location");
+                Matcher matcher = Pattern.compile("POINT\\s*\\(\\s*(-?\\d+\\.?\\d*)\\s+(-?\\d+\\.?\\d*)\\s*\\)").matcher(wkt);
+                Point2D location = null;
+                if (matcher.find()) {
+                    double longitude = Double.parseDouble(matcher.group(1));
+                    double latitude = Double.parseDouble(matcher.group(2));
+                    location = new Point2D.Double(longitude, latitude);
+                }
                 listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"),
                         rs.getString("address"), rs.getString("postal_code"),
-                        rs.getBigDecimal("longitude"), rs.getBigDecimal("latitude"),
-                        rs.getString("city"), rs.getString("country"),
+                        location, rs.getString("city"), rs.getString("country"),
                         rs.getLong("users_sin")));
             }
             return listings;
@@ -248,8 +264,13 @@ public class Dao {
 
 
     public Long insertListing(Listing listing) {
+        // Not using getInsertStatement because of the location field is not supported by JDBC
+        SqlQuery sql = new SqlQuery("INSERT INTO listings (listing_type, address, postal_code, location, city, country, users_sin) " +
+                "VALUES (?, ?, ?, ST_GeomFromText(?), ?, ?, ?)",
+                listing.listing_type(), listing.address(), listing.postal_code(),
+                listing.location(), listing.city(), listing.country(), listing.users_sin());
         try {
-            return executeStatement(getInsertStatement(listing, "listings"));
+            return executeStatement(sql);
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting listing", e);
         }
@@ -401,8 +422,25 @@ public class Dao {
                 try {
                     Object value = component.getAccessor().invoke(filter.listing());
                     if (value != null) {
-                        sql.append(" AND " + component.getName() + " = ?");
-                        parameters.add(value);
+                        if (component.getName().equals("listing_type") && filter.listingTypes() != null) {
+                            sql.append(" AND listing_type IN (");
+                            for (int i = 0; i < filter.listingTypes().size(); i++) {
+                                sql.append("?");
+                                parameters.add(filter.listingTypes().get(i));
+                                if (i < filter.listingTypes().size() - 1) {
+                                    sql.append(", ");
+                                }
+                            }
+                            sql.append(")");
+                        } else if (component.getName().equals("location") && filter.searchRadius() != null) {
+                            sql.append(" AND ST_Distance_Sphere(location, ST_MakePoint(?, ?)) <= ?");
+                            parameters.add(((Point2D) value).getX());
+                            parameters.add(((Point2D) value).getY());
+                            parameters.add(filter.searchRadius().multiply(BigDecimal.valueOf(100))); // convert km to m since ST_Distance_Sphere returns distance in m
+                        } else {
+                            sql.append(" AND " + component.getName() + " = ?");
+                            parameters.add(value);
+                        }
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -415,14 +453,27 @@ public class Dao {
                 try {
                     Object value = component.getAccessor().invoke(filter.availability());
                     if (value != null) {
-                        if (component.getName().equals("start_date")) {
+                        if (component.getName().equals("start_date") && filter.startDateRange() != null) {
                             sql.append(" AND start_date >= ?");
-                        } else if (component.getName().equals("end_date")) {
+                            parameters.add(filter.startDateRange());
+                        } else if (component.getName().equals("end_date") && filter.endDateRange() != null) {
                             sql.append(" AND end_date <= ?");
-                        } else if (component.getName().equals("price_per_night")) {
+                            parameters.add(filter.endDateRange());
+                        } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() != null && filter.maxPricePerNight() != null) {
+                            sql.append(" AND price_per_night >= ?");
+                            parameters.add(filter.minPricePerNight());
                             sql.append(" AND price_per_night <= ?");
+                            parameters.add(filter.maxPricePerNight());
+                        } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() != null && filter.maxPricePerNight() == null) {
+                            sql.append(" AND price_per_night >= ?");
+                            parameters.add(filter.minPricePerNight());
+                        } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() == null && filter.maxPricePerNight() != null) {
+                            sql.append(" AND price_per_night <= ?");
+                            parameters.add(filter.maxPricePerNight());
+                        } else {
+                            sql.append(" AND " + component.getName() + " = ?");
+                            parameters.add(value);
                         }
-                        parameters.add(value);
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);

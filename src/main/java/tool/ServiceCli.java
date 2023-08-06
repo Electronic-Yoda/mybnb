@@ -3,6 +3,7 @@ package tool;
 import data.Dao;
 import domain.*;
 import exception.ServiceException;
+import filter.ListingFilter;
 import service.BookingService;
 import service.ListingService;
 import service.UserService;
@@ -16,6 +17,7 @@ import org.jline.terminal.*;
 import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.reader.impl.history.DefaultHistory;
 
+import java.awt.geom.Point2D;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -219,7 +221,9 @@ public class ServiceCli {
                 return;
             }
 
-            Listing listing = new Listing(null, listingType, address, postalCode, new BigDecimal(longitude), new BigDecimal(latitude), city, country,
+            Listing listing = new Listing(null, listingType, address, postalCode,
+                    new Point2D.Double(Double.parseDouble(longitude), Double.parseDouble(latitude)),
+                    city, country,
                     Long.parseLong(logged_in_user_sin));
 
             Long listing_id =  listingService.addListing(listing);
@@ -716,6 +720,9 @@ public class ServiceCli {
             case "availabilities":
                 handleShowAvailability(args);
                 break;
+            case "listings":
+                handleShowListings(args);
+                break;
             // TODO: Add other "show" sub-commands handlers here, if needed
             default:
                 System.out.println("Unknown sub-command for 'show': " + subCommand);
@@ -735,9 +742,11 @@ public class ServiceCli {
             List<Listing> listings = listingService.getListingsOfUser(Long.parseLong(logged_in_user_sin));
 
             for (Listing listing : listings) {
-                String listingString = String.format("Listing id: %s, Listing type: %s, Address: %s, Postal code: %s, Longitude: %s, Latitude: %s, City: %s, Country: %s, Host SIN: %s",
-                        listing.listing_id(), listing.listing_type(), listing.address(), listing.postal_code(), listing.longitude(), listing.latitude(), listing.city(), listing.country(), listing.users_sin());
-                System.out.println(listingString);
+//                String listingString = String.format("Listing id: %s, Listing type: %s, Address: %s, Postal code: %s, Longitude: %s, Latitude: %s, City: %s, Country: %s, Host SIN: %s",
+//                        listing.listing_id(), listing.listing_type(), listing.address(), listing.postal_code(), listing.longitude(), listing.latitude(), listing.city(), listing.country(), listing.users_sin());
+//                System.out.println(listingString);
+
+                System.out.println(listing);
             }
 
         } catch (ServiceException e) {
@@ -833,6 +842,125 @@ public class ServiceCli {
                         availability.availability_id(), availability.start_date(), availability.end_date(), availability.price_per_night(), availability.listings_listing_id());
                 System.out.println(availabilityString);
             }
+
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+        } catch (org.apache.commons.cli.ParseException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
+    }
+
+    private void handleShowListings(String[] args) {
+        if (!checkUserLoggedIn())
+            return;
+
+        try {
+            Options options = new Options();
+
+            // Listings filter options
+            options.addOption(Option.builder("l").longOpt("listing-id").hasArg().desc("listing id").build());
+
+            options.addOption(Option.builder("t").longOpt("listing types").hasArg()
+                            .desc("listing types, separated by comma with a space").build());
+
+            options.addOption(Option.builder("a").longOpt("address").hasArg()
+                    .desc("listing address").build());
+
+            options.addOption(Option.builder("pc").longOpt("postal_code").hasArg()
+                    .desc("listing postal code").build());
+
+            options.addOption(Option.builder("lo").longOpt("longitude").hasArg()
+                    .desc("listing longitude").build());
+
+            options.addOption(Option.builder("la").longOpt("latitude").hasArg()
+                    .desc("listing latitude").build());
+
+            options.addOption(Option.builder("ci").longOpt("city").hasArg()
+                    .desc("listing city").build());
+
+            options.addOption(Option.builder("co").longOpt("country").hasArg()
+                    .desc("listing country").build());
+            options.addOption(Option.builder("s").longOpt("user-sin").hasArg()
+                    .desc("user sin").build());
+
+
+            // Availabilities filter options
+            options.addOption(Option.builder("sd").longOpt("start-date").hasArg()
+                    .desc("availability start date").build());
+            options.addOption(Option.builder("ed").longOpt("end-date").hasArg()
+                    .desc("availability end date").build());
+            options.addOption(Option.builder("ppn").longOpt("price-per-night").hasArg()
+                    .desc("availability price per night").build());
+
+            // Amenities filter options
+            options.addOption(Option.builder("a").longOpt("amenities").hasArg()
+                    .desc("amenities (input a list of amenities, separated by comma followed by a space").build());
+
+            options.addOption("h", "help", false, "show help.");
+
+            CommandLineParser parser = new DefaultParser();
+            CommandLine cmd = parser.parse(options, args);
+
+            Long listingId = cmd.hasOption("l") ? Long.parseLong(cmd.getOptionValue("l")) : null;
+            String listingType = cmd.getOptionValue("t");
+            String address = cmd.hasOption("a") ? cmd.getOptionValue("a").replaceAll("_", " ") : null;
+            String postalCode = cmd.hasOption("pc") ? cmd.getOptionValue("pc").replaceAll("_", " ") : null;
+            Double longitude = cmd.getOptionValue("lo") != null ? Double.parseDouble(cmd.getOptionValue("lo")) : null;
+            Double latitude = cmd.getOptionValue("la") != null ? Double.parseDouble(cmd.getOptionValue("la")) : null;
+            Point2D location = longitude != null && latitude != null ? new Point2D.Double(longitude, latitude) : null;
+            String city = cmd.getOptionValue("ci");
+            String country = cmd.getOptionValue("co");
+            Long userSin = cmd.hasOption("s") ? Long.parseLong(cmd.getOptionValue("s")) : null;
+
+            LocalDate startDate = cmd.getOptionValue("sd") != null ? LocalDate.parse(cmd.getOptionValue("sd")) : null;
+            LocalDate endDate = cmd.getOptionValue("ed") != null ? LocalDate.parse(cmd.getOptionValue("ed")) : null;
+            BigDecimal pricePerNight = cmd.getOptionValue("ppn") != null ? new BigDecimal(cmd.getOptionValue("ppn")) : null;
+
+            String amenities = cmd.getOptionValue("a");
+            // the listing types are separated by comma followed by a space
+            List<String> listingTypesList = listingType != null ? Arrays.asList(listingType.split(", ")) : null;
+            // The amenities are separated by comma followed by a space
+            List<String> amenitiesList = amenities != null ? Arrays.asList(amenities.split(", ")) : null;
+
+
+            ListingFilter listingFilter = new ListingFilter.Builder()
+                    .withListing(
+                            new Listing(
+                                    listingId,
+                                    (listingTypesList == null) ? null : listingTypesList.get(0),
+                                    address,
+                                    postalCode,
+                                    location,
+                                    city,
+                                    country,
+                                    userSin
+                            )
+                    )
+                    .withAvailability(
+                            new Availability(
+                                    null,
+                                    startDate,
+                                    endDate,
+                                    pricePerNight,
+                                    listingId
+                            )
+                    )
+                    .withAmenities(amenitiesList)
+                    .withListingTypes(listingTypesList)
+                    .build();
+
+            List<Listing> listings = listingService.searchListingsByFilter(listingFilter);
+            System.out.println("Listings found: " + listings.size());
+            for (Listing listing : listings) {
+                 System.out.println(listing);
+//                String listingString = String.format("Listing id: %s, Listing type: %s, Address: %s, Postal code: %s, Longitude: %s, Latitude: %s, City: %s, Country: %s, User sin: %s",
+//                        listing.listing_id(), listing.listing_type(), listing.address(), listing.postal_code(), listing.longitude(), listing.latitude(), listing.city(), listing.country(), listing.users_sin());
+//                System.out.println(listingString);
+            }
+
 
         } catch (ServiceException e) {
             System.out.println(e.getMessage());

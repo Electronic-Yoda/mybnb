@@ -16,6 +16,7 @@ import service.BookingService;
 import service.ListingService;
 import service.UserService;
 
+import java.awt.geom.Point2D;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -130,6 +131,43 @@ public class Emulator {
             "Toronto Public Library, Toronto, ON",
             "Toronto City Hall, Toronto, ON",
             "Toronto Police Service, Toronto, ON",
+            "Mcdonalds, Hamilton, ON",
+            "Tim Hortons, Hamilton, ON",
+            "Subway, Hamilton, ON",
+            "Pizza Pizza, Hamilton, ON",
+            "Pizza Hut, Hamilton, ON",
+            "Popeyes, Hamilton, ON",
+            "One World Trade Center, New York, NY",
+            "Empire State Building, New York, NY",
+            "Statue of Liberty, New York, NY",
+            "Rockefeller Center, New York, NY",
+            "Times Square, New York, NY",
+            "Central Park, New York, NY",
+            "Brooklyn Bridge, New York, NY",
+            "Grand Central Terminal, New York, NY",
+            "Metropolitan Museum of Art, New York, NY",
+            "Museum of Modern Art, New York, NY",
+            "American Museum of Natural History, New York, NY",
+            "Ellis Island, New York, NY",
+            "Solomon R. Guggenheim Museum, New York, NY",
+            "Radio City Music Hall, New York, NY",
+            "High Line, New York, NY",
+            "St. Patrick's Cathedral, New York, NY",
+            "MIT, Cambridge, MA",
+            "Harvard University, Cambridge, MA",
+            "Boston University, Boston, MA",
+            "Boston College, Boston, MA",
+            "Northeastern University, Boston, MA",
+            "Tufts University, Boston, MA",
+            "Parliament Hill, Ottawa, ON",
+            "Rideau Canal, Ottawa, ON",
+            "National Gallery of Canada, Ottawa, ON",
+            "Canadian War Museum, Ottawa, ON",
+            "Canadian Museum of History, Ottawa, ON",
+            "Canadian Museum of Nature, Ottawa, ON",
+            "ByWard Market, Ottawa, ON",
+            "Notre-Dame Cathedral Basilica, Ottawa, ON",
+            "Peace Tower, Ottawa, ON",
             // Add more specific locations as needed
     };
 
@@ -162,6 +200,7 @@ public class Emulator {
                 .setPrettyPrinting()
                 .serializeNulls()
                 .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
+                .registerTypeAdapter(Point2D.class, new Point2DAdapter())
                 .create();
     }
 
@@ -214,8 +253,7 @@ public class Emulator {
                                     listingTypes[random.nextInt(listingTypes.length)],
                                     result.formattedAddress,
                                     postalCode,
-                                    new BigDecimal(result.geometry.location.lng),
-                                    new BigDecimal(result.geometry.location.lat),
+                                    new Point2D.Double(result.geometry.location.lng, result.geometry.location.lat),
                                     "Toronto",
                                     "Canada",
                                     sin
@@ -283,6 +321,10 @@ public class Emulator {
                     listingService.addListing(listing);
                 } catch (Exception e) {
                     System.out.println("Emulator: Did not add listing: " + listing);
+                    System.out.println(e.getMessage());
+                    if (e.getCause() != null) {
+                        System.out.println(e.getCause().getMessage());
+                    }
                 }
             }
 
@@ -354,10 +396,13 @@ public class Emulator {
     }
 
     public static void main(String[] args) {
+        Emulator emulator = new Emulator();
+//        emulator.generateUserAndListingFiles();
+
         DbConfig dbConfig = new DbConfig();
         dbConfig.resetTables();
-        Emulator emulator = new Emulator();
         emulator.loadDataToDatabase();
         emulator.showLoadedData();
+        dbConfig.resetTables();
     }
 }

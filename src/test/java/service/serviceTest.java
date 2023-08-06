@@ -5,6 +5,7 @@ import data.DbConfig;
 import domain.*;
 import exception.ServiceException;
 
+import java.awt.geom.Point2D;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -56,8 +57,7 @@ public class serviceTest {
                 "house",
                 "123 Main St.",
                 "M5S 1A1",
-                new BigDecimal("43.66"),
-                new BigDecimal("79.40"),
+                new Point2D.Double(43.66, 79.40),
                 "Toronto",
                 "Canada",
                 user1.sin()
@@ -67,8 +67,7 @@ public class serviceTest {
                 "condo",
                 "111 Main St.",
                 "M5T 1C1",
-                new BigDecimal("42.11"),
-                new BigDecimal("79.40"),
+                new Point2D.Double(43.66, 79.40),
                 "Toronto",
                 "Canada",
                 user1.sin()

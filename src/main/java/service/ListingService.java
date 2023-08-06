@@ -4,7 +4,6 @@ import data.Dao;
 import domain.Amenity;
 import domain.Availability;
 import domain.Listing;
-import domain.User;
 import exception.DataAccessException;
 import exception.ServiceException;
 import filter.ListingFilter;
@@ -13,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ListingService {
@@ -137,21 +135,20 @@ public class ListingService {
                         String.format("Unable to get listings because user with sin, %d, doesn't exist", sin));
             }
             List<Listing> listings = dao.getListingsByFilter(
-                    new ListingFilter(
-                            new Listing(
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    sin
-                            ),
-                            null,
-                            null
-                    )
+                    new ListingFilter.Builder()
+                            .withListing(
+                                new Listing(
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        sin
+                                )
+                            )
+                            .build()
             );
             dao.commitTransaction();  // Commit transaction if all operations succeeded
             return listings;
