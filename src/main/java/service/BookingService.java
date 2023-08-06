@@ -505,6 +505,30 @@ public class BookingService {
         }
     }
 
+    public List<Review> getReviewsAsTenant(Long tenantId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Review> reviews = dao.getReviewsAsTenant(tenantId);
+            dao.commitTransaction();
+            return reviews;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve reviews."), e);
+        }
+    }
+
+    public List<Review> getReviewsAsHost(Long hostId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Review> reviews = dao.getReviewsAsHost(hostId);
+            dao.commitTransaction();
+            return reviews;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve reviews."), e);
+        }
+    }
+
     public Date getCurrDate() throws ServiceException {
         try {
             dao.startTransaction();

@@ -568,6 +568,9 @@ public class ServiceCli {
             case "availability":
                 handleRemoveAvailability(args);
                 break;
+            case "review":
+                handleRemoveReview(args);
+                break;
             // TODO: Add other "remove" sub-commands handlers here, if needed
             default:
                 System.out.println("Unknown sub-command for 'remove': " + subCommand);
@@ -617,6 +620,46 @@ public class ServiceCli {
             }
         } catch (org.apache.commons.cli.ParseException e) {
             System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
+    }
+
+    private void handleRemoveReview(String[] args) {
+        if (!checkUserLoggedIn())
+            return;
+
+        try {
+            Options options = new Options();
+            options.addOption(Option.builder("b").longOpt("booking-id").hasArg().required().desc("booking id").build());
+
+            CommandLineParser parser = new DefaultParser();
+            CommandLine cmd = parser.parse(options, args);
+
+            String bookingId = cmd.getOptionValue("b");
+
+            // Check if user is tenant of booking
+            if (bookingService.isTenantOfBooking(Long.parseLong(bookingId), Long.parseLong(logged_in_user_sin))) {
+                tenantReviewRemoverRoutine(Long.parseLong(logged_in_user_sin), Long.parseLong(bookingId));
+            }
+            // Check if user is host of Booking
+            else if (bookingService.isHostOfBooking(Long.parseLong(bookingId), Long.parseLong(logged_in_user_sin))) {
+                hostReviewRemoverRoutine(Long.parseLong(logged_in_user_sin), Long.parseLong(bookingId));
+            }
+            else {
+                System.out.println("User is neither host nor tenant of booking");
+                return;
+            }
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        } catch (org.apache.commons.cli.ParseException e) {
+            System.out.println(e.getMessage());
+
             if (e.getCause() != null) {
                 System.out.println(e.getCause().getMessage());
             }
@@ -735,6 +778,9 @@ public class ServiceCli {
             case "mybookings":
                 handleShowMyBookings(args);
                 break;
+            case "myreviews":
+                handleShowMyReviews(args);
+                break;
             case "amenities":
                 handleShowAmenities(args);
                 break;
@@ -803,6 +849,37 @@ public class ServiceCli {
             }
         } catch (ServiceException e) {
             System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
+    }
+
+    private void handleShowMyReviews(String[] args) {
+        if (!checkUserLoggedIn())
+            return;
+
+        try {
+            System.out.println("My Reviews (as a Tenant):");
+            List<Review> reviews = bookingService.getReviewsAsTenant(Long.parseLong(logged_in_user_sin));
+
+            for (Review review : reviews) {
+                String reviewString = String.format("Review id: %s, Rating: %s, Comment: %s, Booking id: %s",
+                        review.review_id(), review.rating_of_tenant(), review.comment_from_host(), review.bookings_booking_id());
+                System.out.println(reviewString);
+            }
+
+            System.out.println("My Reviews (as a Host):");
+            reviews = bookingService.getReviewsAsHost(Long.parseLong(logged_in_user_sin));
+
+            for (Review review : reviews) {
+                String reviewString = String.format("Review id: %s, Host Rating: %s, Listing Rating: %s, Comment: %s, Booking id: %s",
+                        review.review_id(), review.rating_of_host(), review.rating_of_listing(), review.comment_from_tenant(), review.bookings_booking_id());
+                System.out.println(reviewString);
+            }
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+
             if (e.getCause() != null) {
                 System.out.println(e.getCause().getMessage());
             }
@@ -1167,7 +1244,33 @@ public class ServiceCli {
                 System.out.println(e.getCause().getMessage());
             }
         }
+    }
 
+    private void tenantReviewRemoverRoutine(Long tenantID, Long bookingID){
+        try {
+            bookingService.deleteCommentFromTenant(tenantID, bookingID);
+            bookingService.deleteTenantRateHost(tenantID, bookingID);
+            bookingService.deleteTenantRateListing(tenantID, bookingID);
+            System.out.println("Review removed");
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
+    }
+
+    private void hostReviewRemoverRoutine(Long hostID, Long bookingID){
+        try {
+            bookingService.deleteCommentFromHost(hostID, bookingID);
+            bookingService.deleteHostRateTenant(hostID, bookingID);
+            System.out.println("Review removed");
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
     }
 
     private void amenityAdderRoutine(Long listingID){

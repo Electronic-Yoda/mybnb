@@ -1051,6 +1051,28 @@ public class Dao {
         }
     }
 
+    public List<Review> getReviewsAsTenant(Long tenantId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM reviews WHERE bookings_booking_id IN " +
+                "(SELECT booking_id FROM bookings WHERE tenant_sin = ?)", tenantId);
+        try {
+            return executeReviewQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting reviews as tenant", e);
+        }
+    }
+
+    public List<Review> getReviewsAsHost(Long hostId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM reviews WHERE bookings_booking_id IN " +
+                "(SELECT booking_id FROM bookings WHERE listings_listing_id IN " +
+                "(SELECT listing_id FROM listings WHERE users_sin = ?))", hostId);
+
+        try {
+            return executeReviewQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting reviews as host", e);
+        }
+    }
+
     public List<Review> getReviewsOfListing(Long listing_id) {
         SqlQuery query = new SqlQuery("SELECT * FROM reviews " +
                 "JOIN bookings ON reviews.bookings_booking_id = bookings.booking_id " +
