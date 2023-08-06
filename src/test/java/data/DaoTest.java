@@ -6,6 +6,7 @@ import domain.User;
 import filter.ListingFilter;
 import filter.UserFilter;
 
+import java.awt.geom.Point2D;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -123,8 +124,7 @@ class DaoTest {
                 "house",
                 "123 Main St.",
                 "M5S 1A1",
-                new BigDecimal(43.66),
-                new BigDecimal(79.40),
+                new Point2D.Double(43.66, 79.40),
                 "Toronto",
                 "Canada",
                 123456789L
@@ -164,8 +164,7 @@ class DaoTest {
                 "house",
                 "123 Main St.",
                 "M5S 1A1",
-                new BigDecimal("43.66"),
-                new BigDecimal("79.40"),
+                new Point2D.Double(43.66, 80.40),
                 "Toronto",
                 "Canada",
                 user.sin()
@@ -177,8 +176,7 @@ class DaoTest {
                 "condo",
                 "111 Main St.",
                 "M5T 1C1",
-                new BigDecimal("42.11"),
-                new BigDecimal("79.40"),
+                new Point2D.Double(40.66, 79.40),
                 "Toronto",
                 "Canada",
                 user.sin()
@@ -261,19 +259,12 @@ class DaoTest {
         System.out.println(amenities2);
         System.out.println();
 
-        // use filter to get listings with availability between 2021-03-12 and 2021-03-15
+        // use filter to get listings with availability between 2021-03-12 and 2021-03-16
         List<Listing> listingsRetrieved = dao.getListingsByFilter(
-                new ListingFilter(
-                        null,
-                        new Availability(
-                                null,
-                                LocalDate.parse("2021-03-12"),
-                                LocalDate.parse("2021-03-16"),
-                                null,
-                                null
-                        ),
-                        null
-                )
+                new ListingFilter.Builder()
+                        .withStartDateRange(LocalDate.parse("2021-03-12"))
+                        .withEndDateRange(LocalDate.parse("2021-03-16"))
+                        .build()
         );
         assertTrue(listingsRetrieved.size() == 2);
         System.out.println("Listings retrieved with availability between 2021-03-12 and 2021-03-16:");
@@ -281,11 +272,9 @@ class DaoTest {
 
         // use filter to get listings with amenities wifi
         listingsRetrieved = dao.getListingsByFilter(
-                new ListingFilter(
-                        null,
-                        null,
-                        Collections.singletonList("wifi")
-                )
+                new ListingFilter.Builder()
+                        .withAmenities(Collections.singletonList("wifi"))
+                        .build()
         );
         assertTrue(listingsRetrieved.size() == 2);
         System.out.println("Listings retrieved by filtering with wifi:");
@@ -293,11 +282,9 @@ class DaoTest {
 
         // use filter to get listings with amenities wifi and tv
         listingsRetrieved = dao.getListingsByFilter(
-                new ListingFilter(
-                        null,
-                        null,
-                        List.of("wifi", "tv")
-                )
+                new ListingFilter.Builder()
+                        .withAmenities(List.of("wifi", "tv"))
+                        .build()
         );
         assertTrue(listingsRetrieved.size() == 1);
         System.out.println("Listings retrieved by filtering with wifi and tv:");
@@ -305,18 +292,17 @@ class DaoTest {
 
         // use filter to get listings with amenities backyard
         listingsRetrieved = dao.getListingsByFilter(
-                new ListingFilter(
-                        null,
-                        null,
-                        Collections.singletonList("backyard")
-                )
+                new ListingFilter.Builder()
+                        .withAmenities(Collections.singletonList("backyard"))
+                        .build()
         );
         assertTrue(listingsRetrieved.isEmpty());
 
         // use filter to get listings with wifi and is a house
         listingsRetrieved = dao.getListingsByFilter(
-                new ListingFilter(
-                        new Listing(
+                new ListingFilter.Builder()
+                        .withListing(
+                            new Listing(
                                 null,
                                 "house",
                                 null,
@@ -324,12 +310,11 @@ class DaoTest {
                                 null,
                                 null,
                                 null,
-                                null,
                                 null
-                        ),
-                        null,
-                        Collections.singletonList("wifi")
-                )
+                            )
+                        )
+                        .withAmenities(Collections.singletonList("wifi"))
+                        .build()
         );
         assertTrue(listingsRetrieved.size() == 1);
         System.out.println("Listings retrieved by filtering with wifi and is a house:");

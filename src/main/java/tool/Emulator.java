@@ -1,22 +1,22 @@
-package tools;
+package tool;
 
 import com.github.javafaker.Faker;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import com.google.maps.GeoApiContext;
 import com.google.maps.GeocodingApi;
 import com.google.maps.model.AddressComponent;
 import com.google.maps.model.AddressComponentType;
-import com.google.maps.model.AddressType;
 import com.google.maps.model.GeocodingResult;
 import data.Dao;
-import domain.Amenity;
-import domain.Listing;
-import domain.User;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import data.DbConfig;
+import domain.*;
+import service.BookingService;
 import service.ListingService;
+import service.UserService;
 
+import java.awt.geom.Point2D;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -28,6 +28,11 @@ import java.time.ZoneId;
 import java.util.*;
 
 public class Emulator {
+
+    private final Dao dao;
+    private final UserService userService;
+    private final ListingService listingService;
+    private final BookingService bookingService;
 
     String[] occupations = {
             "Engineer", "Doctor", "Teacher", "Programmer", "Nurse", "Lawyer",
@@ -126,6 +131,43 @@ public class Emulator {
             "Toronto Public Library, Toronto, ON",
             "Toronto City Hall, Toronto, ON",
             "Toronto Police Service, Toronto, ON",
+            "Mcdonalds, Hamilton, ON",
+            "Tim Hortons, Hamilton, ON",
+            "Subway, Hamilton, ON",
+            "Pizza Pizza, Hamilton, ON",
+            "Pizza Hut, Hamilton, ON",
+            "Popeyes, Hamilton, ON",
+            "One World Trade Center, New York, NY",
+            "Empire State Building, New York, NY",
+            "Statue of Liberty, New York, NY",
+            "Rockefeller Center, New York, NY",
+            "Times Square, New York, NY",
+            "Central Park, New York, NY",
+            "Brooklyn Bridge, New York, NY",
+            "Grand Central Terminal, New York, NY",
+            "Metropolitan Museum of Art, New York, NY",
+            "Museum of Modern Art, New York, NY",
+            "American Museum of Natural History, New York, NY",
+            "Ellis Island, New York, NY",
+            "Solomon R. Guggenheim Museum, New York, NY",
+            "Radio City Music Hall, New York, NY",
+            "High Line, New York, NY",
+            "St. Patrick's Cathedral, New York, NY",
+            "MIT, Cambridge, MA",
+            "Harvard University, Cambridge, MA",
+            "Boston University, Boston, MA",
+            "Boston College, Boston, MA",
+            "Northeastern University, Boston, MA",
+            "Tufts University, Boston, MA",
+            "Parliament Hill, Ottawa, ON",
+            "Rideau Canal, Ottawa, ON",
+            "National Gallery of Canada, Ottawa, ON",
+            "Canadian War Museum, Ottawa, ON",
+            "Canadian Museum of History, Ottawa, ON",
+            "Canadian Museum of Nature, Ottawa, ON",
+            "ByWard Market, Ottawa, ON",
+            "Notre-Dame Cathedral Basilica, Ottawa, ON",
+            "Peace Tower, Ottawa, ON",
             // Add more specific locations as needed
     };
 
@@ -139,17 +181,30 @@ public class Emulator {
     int maxNumberOfListings = 10;
     int minNumberOfListings = 1;
 
-    ListingService listingService = new ListingService(new Dao());
+    public Emulator() {
+        this.dao = new Dao();
+        this.userService = new UserService(dao);
+        this.listingService = new ListingService(dao);
+        this.bookingService = new BookingService(dao);
+    }
+
+    public Emulator(Dao dao) {
+        this.dao = dao;
+        this.userService = new UserService(dao);
+        this.listingService = new ListingService(dao);
+        this.bookingService = new BookingService(dao);
+    }
 
     public Gson getGson() {
         return new GsonBuilder()
                 .setPrettyPrinting()
                 .serializeNulls()
                 .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
+                .registerTypeAdapter(Point2D.class, new Point2DAdapter())
                 .create();
     }
 
-    public void generateUserAndListingData(int numberOfHosts, long sinStartingValue,
+    public void generateUserAndListingFiles(int numberOfHosts, long sinStartingValue,
                                             String userFilePath, String listingFilePath, String apiKey) {
         try {
             Faker faker = new Faker();
@@ -178,7 +233,6 @@ public class Emulator {
                 Long sin = sinStartingValue + i;
                 String name = faker.name().fullName(); // Generate a name
                 String address = faker.address().streetAddress();
-                //LocalDate birthdate = LocalDate.of(random.nextInt(1982) + 1920, random.nextInt(12) + 1, random.nextInt(28) + 1); // Generate a birthdate before 2002
                 LocalDate birthdate = faker.date().birthday(18, 100).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
                 String occupation = occupations[random.nextInt(occupations.length)]; // Generate an occupation
 
@@ -199,8 +253,7 @@ public class Emulator {
                                     listingTypes[random.nextInt(listingTypes.length)],
                                     result.formattedAddress,
                                     postalCode,
-                                    new BigDecimal(result.geometry.location.lng),
-                                    new BigDecimal(result.geometry.location.lat),
+                                    new Point2D.Double(result.geometry.location.lng, result.geometry.location.lat),
                                     "Toronto",
                                     "Canada",
                                     sin
@@ -232,8 +285,7 @@ public class Emulator {
         }
     }
 
-
-    public static void main(String[] args) {
+    public void generateUserAndListingFiles() {
         String currentDirectory = System.getProperty("user.dir");
         String emulatorDataDir = Paths.get(currentDirectory, "emulator_data").toString();
         if (!new java.io.File(emulatorDataDir).exists()) {
@@ -246,12 +298,111 @@ public class Emulator {
         try (InputStream input = new FileInputStream("credentials.properties")) {
             properties.load(input);
             String apiKey = properties.getProperty("GOOGLE_MAPS_API_KEY");
-            // Now you can use apiKey in your code
-            Emulator emulator = new Emulator();
-            emulator.generateUserAndListingData(50, 3,
+            generateUserAndListingFiles(50, 3,
                     userFilePath, listingFilePath, apiKey);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void loadDataToDatabase(String userFilePath, String listingFilePath) {
+        try {
+            Gson gson = getGson();
+            String usersJson = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(userFilePath)));
+            String listingsJson = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(listingFilePath)));
+            List<User> users = gson.fromJson(usersJson, new TypeToken<List<User>>() {}.getType());
+            List<Listing> listings = gson.fromJson(listingsJson, new TypeToken<List<Listing>>() {}.getType());
+
+            for (User user : users) {
+                userService.addUser(user);
+            }
+            for (Listing listing : listings) {
+                try {
+                    listingService.addListing(listing);
+                } catch (Exception e) {
+                    System.out.println("Emulator: Did not add listing: " + listing);
+                    System.out.println(e.getMessage());
+                    if (e.getCause() != null) {
+                        System.out.println(e.getCause().getMessage());
+                    }
+                }
+            }
+
+            // get all listings because we need the listing_id
+            listings = listingService.getListings();
+
+            // add amenities
+            List<String> amenities = new ArrayList<>();
+            listingService.getAllAllowedAmenities().forEach(amenity -> amenities.add(amenity.amenity_name()));
+            for (Listing listing : listings) {
+                for (int i = 0; i < amenities.size(); i++) {
+                    if (Math.random() < 0.5) {
+                        listingService.addAmenityToListing(listing.listing_id(), listing.users_sin(), amenities.get(i));
+                    }
+                }
+            }
+            Random random = new Random();
+            // add availabilities
+            for (Listing listing : listings) {
+                LocalDate startDate = LocalDate.of(2023, 8, 1);
+                int plusDays = random.nextInt(30) + 1;
+                LocalDate endDate = startDate.plusDays(plusDays);
+                for (int i = 0; i < random.nextInt(20); i++) {
+                    Availability availability = new Availability(
+                            null,
+                            startDate,
+                            endDate,
+                            new BigDecimal(random.nextInt(700) + 50),
+                            listing.listing_id()
+                    );
+                    try {
+                        listingService.addAvailability(availability, listing.users_sin());
+                    } catch (Exception e) {
+                        System.out.println("Emulator: Did not add availability: " + availability);
+                    }
+                    startDate = endDate.plusDays(random.nextInt(15) + 1);
+                    plusDays = random.nextInt(30) + 1;
+                    endDate = startDate.plusDays(plusDays);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void loadDataToDatabase() {
+        String currentDirectory = System.getProperty("user.dir");
+        String emulatorDataDir = Paths.get(currentDirectory, "emulator_data").toString();
+        String userFilePath = Paths.get(emulatorDataDir, "users.json").toString();
+        String listingFilePath = Paths.get(emulatorDataDir, "listings.json").toString();
+        loadDataToDatabase(userFilePath, listingFilePath);
+    }
+
+    public void showLoadedData() {
+        try {
+            System.out.println("Users:");
+            userService.getUsers().forEach(System.out::println);
+            System.out.println("Listings:");
+            for (Listing listing : listingService.getListings()) {
+                System.out.println(listing);
+                System.out.println("Amenities:");
+                listingService.getAmenitiesOfListing(listing.listing_id()).forEach(System.out::println);
+                System.out.println("Availabilities:");
+                listingService.getAvailabilitiesOfListing(listing.listing_id()).forEach(System.out::println);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void main(String[] args) {
+        Emulator emulator = new Emulator();
+//        emulator.generateUserAndListingFiles();
+
+        DbConfig dbConfig = new DbConfig();
+        dbConfig.resetTables();
+        emulator.loadDataToDatabase();
+        emulator.showLoadedData();
+        dbConfig.resetTables();
     }
 }

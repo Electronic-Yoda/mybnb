@@ -23,6 +23,7 @@ public class BookingService {
         this.dao = dao;
     }
 
+    // Note: bookings.amount() can be null when passed in. It will be automatically calculated if it is null.
     public Long addBooking(Booking booking) throws ServiceException {
         try {
             dao.startTransaction();
