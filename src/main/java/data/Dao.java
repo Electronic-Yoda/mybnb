@@ -245,7 +245,7 @@ public class Dao {
             ResultSet rs = stmt.executeQuery();
             List<Listing> listings = new ArrayList<>();
             while (rs.next()) {
-                String wkt = rs.getString("location");
+                String wkt = rs.getString("location_wkt");
                 Matcher matcher = Pattern.compile("POINT\\s*\\(\\s*(-?\\d+\\.?\\d*)\\s+(-?\\d+\\.?\\d*)\\s*\\)").matcher(wkt);
                 Point2D location = null;
                 if (matcher.find()) {
@@ -277,7 +277,7 @@ public class Dao {
     }
 
     public boolean listingExists(Listing listing) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
                 listing.postal_code(), listing.city(), listing.country());
         try {
             return !executeListingQuery(query).isEmpty();
@@ -287,7 +287,7 @@ public class Dao {
     }
 
     public Listing getListingByLocation(String postal_code, String city, String country) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
                 postal_code, city, country);
         try {
             List<Listing> listings = executeListingQuery(query);
@@ -302,7 +302,7 @@ public class Dao {
     }
 
     public List<Listing> getListingsByHostSin(Long host_sin) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE users_sin = ?", host_sin);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE users_sin = ?", host_sin);
         try {
             return executeListingQuery(query);
         } catch (SQLException e) {
@@ -311,7 +311,7 @@ public class Dao {
     }
 
     public boolean listingIdExists(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listing_id);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE listing_id = ?", listing_id);
         try {
             return !executeListingQuery(query).isEmpty();
         } catch (SQLException e) {
@@ -320,7 +320,7 @@ public class Dao {
     }
 
     public Listing getListingById(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listing_id);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE listing_id = ?", listing_id);
         try {
             return executeListingQuery(query).get(0);
         } catch (SQLException e) {
@@ -362,7 +362,7 @@ public class Dao {
     }
 
     public boolean doesCityExists(String city) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE city = ?", city);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE city = ?", city);
         try {
             return !executeListingQuery(query).isEmpty();
         } catch (SQLException e) {
@@ -371,7 +371,7 @@ public class Dao {
     }
 
     public boolean doesListingIdHaveHostSin(Long listing_id, Long host_sin) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ? AND users_sin = ?", listing_id, host_sin);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE listing_id = ? AND users_sin = ?", listing_id, host_sin);
 
         try {
             return !executeListingQuery(query).isEmpty();
@@ -390,7 +390,7 @@ public class Dao {
     }
 
     public List<Listing> getListings() {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings");
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings");
         try {
             return executeListingQuery(query);
         } catch (SQLException e) {
@@ -400,7 +400,7 @@ public class Dao {
 
 
     public List<Listing> getListingsByFilter(ListingFilter filter) {
-        StringBuilder sql = new StringBuilder("SELECT listings.* FROM listings ");
+        StringBuilder sql = new StringBuilder("SELECT listings.*, ST_AsText(location) as location_wkt FROM listings ");
         List<Object> parameters = new ArrayList<>();
 
         // join with availabilities table if availability filter is not empty

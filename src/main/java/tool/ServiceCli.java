@@ -216,10 +216,10 @@ public class ServiceCli {
                 return;
             }
 
-            if (!isValidPostalCode(postalCode)) {
-                System.out.println("Postal code must be in format A1A 1A1");
-                return;
-            }
+//            if (!isValidPostalCode(postalCode)) {
+//                System.out.println("Postal code must be in format A1A 1A1");
+//                return;
+//            }
 
             Listing listing = new Listing(null, listingType, address, postalCode,
                     new Point2D.Double(Double.parseDouble(longitude), Double.parseDouble(latitude)),
@@ -289,12 +289,12 @@ public class ServiceCli {
                 return;
             }
 
-            Float amount = listingService.getListingPricePerNight(Long.parseLong(listingId)) * getNumberOfDays(availabilityStartDate, availabilityEndDate);
-            LocalDate today = LocalDate.parse(bookingService.getCurrDate().toString());
+//            Float amount = listingService.getListingPricePerNight(Long.parseLong(listingId)) * getNumberOfDays(availabilityStartDate, availabilityEndDate);
+//            LocalDate today = LocalDate.parse(bookingService.getCurrDate().toString());
 
             // Create booking
             Booking booking = new Booking(null, LocalDate.parse(availabilityStartDate),
-                    LocalDate.parse(availabilityEndDate), today, new BigDecimal(amount.toString()), paymentMethod, Long.parseLong(cardNumber),
+                    LocalDate.parse(availabilityEndDate), LocalDate.now(), null, paymentMethod, Long.parseLong(cardNumber),
                     Long.parseLong(logged_in_user_sin), Long.parseLong(listingId));
 
             Long booking_id = bookingService.addBooking(booking);
@@ -454,18 +454,6 @@ public class ServiceCli {
             }
 
 
-//                // Check if user is host of listing
-//                if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
-//                    System.out.println("User is not host of listing");
-//                    return;
-//                }
-//
-//                // Check no overlapping availability
-//                if (listingService.doesDateOverlapWithExistingAvailability(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate))) {
-//                    System.out.println("Availability overlaps with existing availability");
-//                    return;
-//                }
-
             // add availability
             Availability availability = new Availability(null, LocalDate.parse(availabilityStartDate),
                     LocalDate.parse(availabilityEndDate), new BigDecimal(pricePerNight), Long.parseLong(listingId));
@@ -572,17 +560,6 @@ public class ServiceCli {
                 return;
             }
 
-//            // Check if user is host of listing
-//            if (!listingService.isHostOfListing(Long.parseLong(logged_in_user_sin), Long.parseLong(listingId))) {
-//                System.out.println("User is not host of listing");
-//                return;
-//            }
-//
-//            // Check if availability exists
-//            if (!listingService.doesAvailabilityExist(Long.parseLong(listingId), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate))) {
-//                System.out.println("Availability does not exist");
-//                return;
-//            }
             listingService.deleteAvailability(Long.parseLong(listingId), Long.parseLong(logged_in_user_sin), LocalDate.parse(availabilityStartDate), LocalDate.parse(availabilityEndDate));
 
             System.out.printf("Removed availability for listing: %s from: %s to %s\n", listingId,
@@ -857,34 +834,30 @@ public class ServiceCli {
         if (!checkUserLoggedIn())
             return;
 
+        BigDecimal defaultSearchRadius = new BigDecimal(20);
         try {
             Options options = new Options();
 
             // Listings filter options
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().desc("listing id").build());
-
             options.addOption(Option.builder("t").longOpt("listing types").hasArg()
                             .desc("listing types, separated by comma with a space").build());
-
             options.addOption(Option.builder("a").longOpt("address").hasArg()
                     .desc("listing address").build());
-
             options.addOption(Option.builder("pc").longOpt("postal_code").hasArg()
                     .desc("listing postal code").build());
-
             options.addOption(Option.builder("lo").longOpt("longitude").hasArg()
                     .desc("listing longitude").build());
-
             options.addOption(Option.builder("la").longOpt("latitude").hasArg()
                     .desc("listing latitude").build());
-
             options.addOption(Option.builder("ci").longOpt("city").hasArg()
                     .desc("listing city").build());
-
             options.addOption(Option.builder("co").longOpt("country").hasArg()
                     .desc("listing country").build());
             options.addOption(Option.builder("s").longOpt("user-sin").hasArg()
                     .desc("user sin").build());
+            options.addOption(Option.builder("rad").longOpt("search-radius").hasArg()
+                    .desc("Search radius. Defaults to 20 if address is not specified and is not set").build());
 
 
             // Availabilities filter options
@@ -892,8 +865,16 @@ public class ServiceCli {
                     .desc("availability start date").build());
             options.addOption(Option.builder("ed").longOpt("end-date").hasArg()
                     .desc("availability end date").build());
+            options.addOption(Option.builder("sdr").longOpt("start-date-range").hasArg()
+                    .desc("availability start date range").build());
+            options.addOption(Option.builder("edr").longOpt("end-date-range").hasArg()
+                    .desc("availability end date range").build());
             options.addOption(Option.builder("ppn").longOpt("price-per-night").hasArg()
                     .desc("availability price per night").build());
+            options.addOption(Option.builder("pprMin").longOpt("price-per-night-range-min").hasArg()
+                    .desc("availability price per night range min").build());
+            options.addOption(Option.builder("pprMax").longOpt("price-per-night-range-max").hasArg()
+                    .desc("availability price per night range max").build());
 
             // Amenities filter options
             options.addOption(Option.builder("a").longOpt("amenities").hasArg()
@@ -914,10 +895,15 @@ public class ServiceCli {
             String city = cmd.getOptionValue("ci");
             String country = cmd.getOptionValue("co");
             Long userSin = cmd.hasOption("s") ? Long.parseLong(cmd.getOptionValue("s")) : null;
+            BigDecimal searchRadius = cmd.hasOption("rad") ? new BigDecimal(cmd.getOptionValue("rad")) : ((address == null && location != null) ? defaultSearchRadius : null);
 
             LocalDate startDate = cmd.getOptionValue("sd") != null ? LocalDate.parse(cmd.getOptionValue("sd")) : null;
             LocalDate endDate = cmd.getOptionValue("ed") != null ? LocalDate.parse(cmd.getOptionValue("ed")) : null;
+            LocalDate startDateRange = cmd.getOptionValue("sdr") != null ? LocalDate.parse(cmd.getOptionValue("sdr")) : null;
+            LocalDate endDateRange = cmd.getOptionValue("edr") != null ? LocalDate.parse(cmd.getOptionValue("edr")) : null;
             BigDecimal pricePerNight = cmd.getOptionValue("ppn") != null ? new BigDecimal(cmd.getOptionValue("ppn")) : null;
+            BigDecimal pricePerNightRangeMin = cmd.getOptionValue("pprMin") != null ? new BigDecimal(cmd.getOptionValue("pprMin")) : null;
+            BigDecimal pricePerNightRangeMax = cmd.getOptionValue("pprMax") != null ? new BigDecimal(cmd.getOptionValue("pprMax")) : null;
 
             String amenities = cmd.getOptionValue("a");
             // the listing types are separated by comma followed by a space
@@ -950,18 +936,18 @@ public class ServiceCli {
                     )
                     .withAmenities(amenitiesList)
                     .withListingTypes(listingTypesList)
+                    .withStartDateRange(startDateRange)
+                    .withEndDateRange(endDateRange)
+                    .withMinPricePerNight(pricePerNightRangeMin)
+                    .withMaxPricePerNight(pricePerNightRangeMax)
+                    .withSearchRadius(searchRadius)
                     .build();
 
             List<Listing> listings = listingService.searchListingsByFilter(listingFilter);
             System.out.println("Listings found: " + listings.size());
             for (Listing listing : listings) {
                  System.out.println(listing);
-//                String listingString = String.format("Listing id: %s, Listing type: %s, Address: %s, Postal code: %s, Longitude: %s, Latitude: %s, City: %s, Country: %s, User sin: %s",
-//                        listing.listing_id(), listing.listing_type(), listing.address(), listing.postal_code(), listing.longitude(), listing.latitude(), listing.city(), listing.country(), listing.users_sin());
-//                System.out.println(listingString);
             }
-
-
         } catch (ServiceException e) {
             System.out.println(e.getMessage());
         } catch (org.apache.commons.cli.ParseException e) {
@@ -1035,14 +1021,6 @@ public class ServiceCli {
         }
     }
 
-    private boolean isValidPostalCode(String postalCode) {
-        /*
-         * Validates Canadian postal code
-         */
-        Pattern pattern = Pattern.compile("^(?!.*[DFIOQU])[A-VXY][0-9][A-Z] ?[0-9][A-Z][0-9]$");
-        Matcher matcher = pattern.matcher(postalCode);
-        return matcher.matches();
-    }
 
     private boolean isValidListingType(String listingType) {
         List<String> listingTypes = new ArrayList<>();
@@ -1088,6 +1066,28 @@ public class ServiceCli {
             }
         }
         System.out.println("Amenity must be one of: " + amenities.keySet().toString());
+        // print out top 5 amenities by revenue impact
+        // sort amenities by revenue impact
+        List<Map.Entry<String, BigDecimal>> list = new LinkedList<>(amenities.entrySet());
+        Collections.sort(list, new Comparator<Map.Entry<String, BigDecimal>>() {
+            public int compare(Map.Entry<String, BigDecimal> o1,
+                               Map.Entry<String, BigDecimal> o2) {
+                return (o2.getValue()).compareTo(o1.getValue());
+            }
+        });
+        int count = 0;
+        System.out.print("Top amenities to have: ");
+        for (Map.Entry<String, BigDecimal> entry : list) {
+            if (count == 5) {
+                break;
+            }
+            System.out.print(entry.getKey());
+            if (count != 4) {
+                System.out.print(", ");
+            }
+            count++;
+        }
+        System.out.println();
         System.out.println("Enter amenity name or enter 'done' to finish adding amenities");
         while (true) {
             String amenity = myScanner.nextLine();
