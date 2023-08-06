@@ -53,7 +53,7 @@ public class ServiceCli {
                     .build();
 
             while (true) {
-                String prompt = logged_in_user_sin.equals("") ? "> " : "user " + logged_in_user_sin + "> ";
+                String prompt = logged_in_user_sin.equals("") ? "> " : "<user " + logged_in_user_sin + "> ";
                 String line = reader.readLine(prompt);
                 String[] commandArgs = line.split(" ");
 
