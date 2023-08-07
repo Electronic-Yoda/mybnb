@@ -216,30 +216,39 @@ All optional options are shown below. When no options are specified, all listing
 
 ```agsl
 usage: show listings
- -a,--address <arg>                          listing address
- -amen,--amenities <arg>                     amenities (A list of
-                                             amenities, each separated by
-                                             comma
- -ci,--city <arg>                            listing city
- -co,--country <arg>                         listing country
- -ed,--end-date <arg>                        availability end date
- -edr,--end-date-range <arg>                 availability end date range
- -h,--help                                   show help
- -l,--listing-id <arg>                       listing id
- -la,--latitude <arg>                        listing latitude
- -lo,--longitude <arg>                       listing longitude
- -pc,--postal-code <arg>                     listing postal code
- -ppn,--price-per-night <arg>                price per night
- -ppnmax,--price-per-night-range-max <arg>   price per night range max
- -ppnmin,--price-per-night-range-min <arg>   price per night range min
- -rad,--search-radius <arg>                  Search radius. Defaults to 20
-                                             if address is not specified
-                                             and is not set
- -s,--user-sin <arg>                         user sin
- -sd,--start-date <arg>                      availability start date
- -sdr,--start-date-range <arg>               availability start date range
- -t,--listing-types <arg>                    a list of listing types, each
-                                             separated by a comma
+ -a,--address <arg>                               listing address
+ -amen,--amenities <arg>                          amenities (A list of
+                                                  amenities, each
+                                                  separated by comma
+ -ci,--city <arg>                                 listing city
+ -co,--country <arg>                              listing country
+ -ed,--end-date <arg>                             availability end date
+ -edr,--end-date-range <arg>                      availability end date
+                                                  range
+ -h,--help                                        show help
+ -l,--listing-id <arg>                            listing id
+ -la,--latitude <arg>                             listing latitude
+ -lo,--longitude <arg>                            listing longitude
+ -pc,--postal-code <arg>                          listing postal code
+ -ppn,--price-per-night <arg>                     price per night
+ -ppnmax,--price-per-night-range-max <arg>        price per night range
+                                                  max
+ -ppnmin,--price-per-night-range-min <arg>        price per night range
+                                                  min
+ -ppnSortAsc,--price-per-night-sort-asc <arg>     sort by price per night
+                                                  ascending
+ -ppnSortDesc,--price-per-night-sort-desc <arg>   sort by price per night
+                                                  descending
+ -rad,--search-radius <arg>                       Search radius. Defaults
+                                                  to 20 if address is not
+                                                  specified and is not set
+ -s,--user-sin <arg>                              user sin
+ -sd,--start-date <arg>                           availability start date
+ -sdr,--start-date-range <arg>                    availability start date
+                                                  range
+ -t,--listing-types <arg>                         a list of listing types,
+                                                  each separated by a
+                                                  comma
 ```
 
 **Requirements:**
@@ -382,4 +391,51 @@ docker rm mysql-bnb
 ```
 ```
 docker volume rm mysql-bnb
+```
+
+# ServiceCli Demo
+Try to run the following commands in the order they are listed below. Note that the commands are case sensitive.
+```agsl
+// Operations 3: login to user 6
+login user -s 6
+
+show mylistings
+
+show mybookings
+
+// Search by location (there is a 20 km default radius)
+show listings -lo -79.39 -la 43.66
+
+// Search by location (with radius)
+show listings -lo -79.39 -la 43.66 -rad 10
+
+// Search by address (exact and with radius) and with a few other filters
+show listings -a 100_Queens_Park
+show listings -a 100_Queens_Park -rad 10
+    // Note: the returned listings are sorted by ascending distance from the given address
+show listings -a 100_Queens_Park -rad 10 -ppnSortAsc true
+    // Note: the returned listings are sorted by ascending price per night
+show listings -a 100_Queens_Park -rad 10 -ppnSortDesc true
+    // Note: the returned listings are sorted by descending price per night
+show listings -a 100_Queens_Park -rad 100
+
+// Search by postal code (exact and with radius)
+show listings -pc 10011
+show listings -pc 10011 -rad 50
+
+// Search by listing type and with a few other filters
+show listings -pc 10011 -rad 50 -t guesthouse
+show listings -pc 10011 -rad 50 -t guesthouse,apartment
+show listings -pc 10011 -rad 50 -t guesthouse,apartment -ppnSortAsc true
+show listings -pc 10011 -rad 50 -t guesthouse,apartment -ppnSortDesc true
+
+// Search by listing type and amenities plus a few other filters
+show listings -pc 10011 -rad 50 -t guesthouse,apartment -amen wifi
+show listings -amen tv,dryer
+show listings -t hotel -amen tv,dryer
+
+// Search by price per night
+show listings -ppnmax 100
+show listings -ppnmin 100 -ppnmax 110
+show listings -ppn <input your exact value>
 ```

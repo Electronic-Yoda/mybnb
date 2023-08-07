@@ -405,11 +405,21 @@ public class Dao {
 
 
     public List<Listing> getListingsByFilter(ListingFilter filter) {
-        StringBuilder sql = new StringBuilder("SELECT DISTINCT listings.*, ST_AsText(location) as location_wkt FROM listings ");
+        StringBuilder sql = new StringBuilder("SELECT DISTINCT listings.*, ST_AsText(location) as location_wkt");
+
         List<Object> parameters = new ArrayList<>();
 
+        if (filter.groupByPriceAscend() || filter.groupByPriceDescend()) {
+            sql.append(", availabilities.price_per_night AS price_per_night");
+        } else if (filter.listing() != null && filter.listing().location() != null && filter.searchRadius() != null) {
+            sql.append(", ST_Distance_Sphere(location, ST_GeomFromText(?)) AS distance");
+            parameters.add(filter.listing().location());
+        }
+        // FROM listings ");
+        sql.append(" FROM listings ");
+
         // join with availabilities table if availability filter is not empty
-        if (filter.availability() != null) {
+        if (filter.availability() != null || filter.groupByPriceAscend() || filter.groupByPriceDescend()) {
             sql.append("JOIN availabilities ON listings.listing_id = availabilities.listings_listing_id ");
         }
 
@@ -505,7 +515,15 @@ public class Dao {
             parameters.add(filter.amenities().size());
         }
 
-        SqlQuery query = new SqlQuery(sql.toString(), parameters.toArray());
+        if (filter.groupByPriceAscend()) {
+            sql.append(" ORDER BY price_per_night");
+        } else if (filter.groupByPriceDescend()) {
+            sql.append(" ORDER BY price_per_night DESC");
+        } else if (filter.listing() != null && filter.listing().location() != null && filter.searchRadius() != null) {
+            sql.append(" ORDER BY distance");
+        }
+
+            SqlQuery query = new SqlQuery(sql.toString(), parameters.toArray());
         try {
             return executeListingQuery(query);
         } catch (SQLException e) {

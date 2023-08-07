@@ -1016,6 +1016,10 @@ public class ServiceCli {
                     .desc("price per night range min").build());
             options.addOption(Option.builder("ppnmax").longOpt("price-per-night-range-max").hasArg()
                     .desc("price per night range max").build());
+            options.addOption(Option.builder("ppnSortAsc").longOpt("price-per-night-sort-asc").hasArg()
+                    .desc("sort by price per night ascending").build());
+            options.addOption(Option.builder("ppnSortDesc").longOpt("price-per-night-sort-desc").hasArg()
+                    .desc("sort by price per night descending").build());
 
             // Amenities filter options
             options.addOption(Option.builder("amen").longOpt("amenities").hasArg()
@@ -1053,6 +1057,8 @@ public class ServiceCli {
             BigDecimal pricePerNight = cmd.getOptionValue("ppn") != null ? new BigDecimal(cmd.getOptionValue("ppn")) : null;
             BigDecimal pricePerNightRangeMin = cmd.getOptionValue("ppnmin") != null ? new BigDecimal(cmd.getOptionValue("ppnmin")) : null;
             BigDecimal pricePerNightRangeMax = cmd.getOptionValue("ppnmax") != null ? new BigDecimal(cmd.getOptionValue("ppnmax")) : null;
+            Boolean pricePerNightSortAsc = cmd.hasOption("ppnSortAsc") ? Boolean.parseBoolean(cmd.getOptionValue("ppnSortAsc")) : false;
+            Boolean pricePerNightSortDesc = cmd.hasOption("ppnSortDesc") ? Boolean.parseBoolean(cmd.getOptionValue("ppnSortDesc")) : false;
 
             String amenities = cmd.getOptionValue("amen");
             // the listing types are separated by comma
@@ -1089,6 +1095,8 @@ public class ServiceCli {
                     .withMinPricePerNight(pricePerNightRangeMin)
                     .withMaxPricePerNight(pricePerNightRangeMax)
                     .withSearchRadius(searchRadius)
+                    .withGroupByPriceAscend(pricePerNightSortAsc)
+                    .withGroupByPriceDescend(pricePerNightSortDesc)
                     .build();
 
             List<Listing> listings = listingService.searchListingsByFilter(listingFilter);
