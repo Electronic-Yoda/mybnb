@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -23,6 +24,7 @@ public class BookingService {
         this.dao = dao;
     }
 
+    // Note: bookings.amount() can be null when passed in. It will be automatically calculated if it is null.
     public Long addBooking(Booking booking) throws ServiceException {
         try {
             dao.startTransaction();
@@ -82,7 +84,7 @@ public class BookingService {
 
             // calculate booking cost
             Listing listing = dao.getListingById(booking.listings_listing_id());
-            BigDecimal amount = pricePerNight.multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(booking.start_date(), booking.end_date())), new MathContext(2));
+            BigDecimal amount = pricePerNight.multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(booking.start_date(), booking.end_date())));
 
             Booking bookingToInsert = new Booking(null, booking.start_date(), booking.end_date(), LocalDate.now(),
                    amount, booking.payment_method(), booking.card_number(), booking.tenant_sin(), booking.listings_listing_id());
@@ -109,8 +111,8 @@ public class BookingService {
             if (!dao.hostSinMatchesBookingId(host_sin, booking_id)) {
                 throw new ServiceException(String.format("Unable to cancel booking because host sin does not match. "));
             }
-            dao.commitTransaction();
             cancelBooking(booking_id, currentDate);
+            dao.commitTransaction();
         } catch (Exception e) {
             dao.rollbackTransaction();
             throw new ServiceException(String.format("Unable to cancel booking."), e);
@@ -123,8 +125,8 @@ public class BookingService {
             if (!dao.tenantSinMatchesBookingId(tenant_sin, booking_id)) {
                 throw new ServiceException(String.format("Unable to cancel booking because tenant sin does not match. "));
             }
-            dao.commitTransaction();
             cancelBooking(booking_id, currentDate);
+            dao.commitTransaction();
         } catch (Exception e) {
             dao.rollbackTransaction();
             throw new ServiceException(String.format("Unable to cancel booking."), e);
@@ -135,13 +137,14 @@ public class BookingService {
         try {
             dao.startTransaction();
             if (!dao.tenantSinMatchesBookingId(tenant_sin, booking_id)) {
-                throw new ServiceException(String.format("Unable to cancel booking because tenant sin does not match. "));
+                dao.commitTransaction();
+                return false;
             }
             dao.commitTransaction();
             return true;
         } catch (Exception e) {
             dao.rollbackTransaction();
-            throw new ServiceException(String.format("Unable to cancel booking."), e);
+            throw new ServiceException(String.format("Unable to determine if user is tenant of booking."), e);
         }
     }
 
@@ -149,76 +152,87 @@ public class BookingService {
         try {
             dao.startTransaction();
             if (!dao.hostSinMatchesBookingId(host_sin, booking_id)) {
-                throw new ServiceException(String.format("Unable to cancel booking because host sin does not match. "));
+                dao.commitTransaction();
+                return false;
             }
             dao.commitTransaction();
             return true;
         } catch (Exception e) {
             dao.rollbackTransaction();
-            throw new ServiceException(String.format("Unable to cancel booking."), e);
+            throw new ServiceException(String.format("Unable to determine if user is host of booking."), e);
         }
     }
 
+    // Not to be used publicly. Must be used within a transaction
     private void cancelBooking(Long booking_id, LocalDate currentDate) throws ServiceException {
-        try {
-            dao.startTransaction();
-            // check if booking exists
-            if (!dao.bookingExists(booking_id)) {
-                throw new ServiceException(String.format("Booking with id, %d, does not exist.", booking_id));
-            }
-
-            // get booking
-            Booking booking = null;
-            try {
-                booking = dao.getBooking(booking_id);
-            } catch (DataAccessException e) {
-                throw new ServiceException(String.format("Unable to retrieve booking."), e);
-            }
-            if (booking.start_date().isBefore(currentDate)) {
-                throw new ServiceException(String.format("Not allowed to cancel booking because booking has already started."));
-            }
-
-            // delete booking
-            dao.deleteBooking(booking_id);
-
-            // insert cancelled booking
-            dao.insertCancelledBooking(new CancelledBooking(null, booking.start_date(), booking.end_date(), booking.transaction_date(),
-                    booking.amount(), booking.payment_method(), booking.card_number(), booking.tenant_sin(), booking.listings_listing_id()));
-
-            // re-insert availability
-            LocalDate newAvailabilityStartDate = booking.start_date(); // To be reset if affectedAvailability exists
-            LocalDate newAvailabilityEndDate = booking.end_date(); // To be reset if affectedAvailability exists
-            BigDecimal bookingPricePerNight = booking.amount().divide(BigDecimal.valueOf(ChronoUnit.DAYS.between(booking.start_date(), booking.end_date())));
-
-            // get affected availabilities (two possible cases)
-            // Case 1: there is an availability whose end_date is the same as booking start_date and price_per_night is the same as booking
-            Availability affectedAvailability1 = dao.getAvailabilityByListingAndEndDate(booking.listings_listing_id(), booking.start_date());
-            if (affectedAvailability1 != null
-                    && affectedAvailability1.price_per_night().equals(bookingPricePerNight)) {
-                newAvailabilityStartDate = affectedAvailability1.start_date();
-                dao.deleteAvailability(affectedAvailability1.availability_id());
-            }
-            // Case 2: there is an availability whose start_date is the same as booking end_date and price_per_night is the same as booking
-            Availability affectedAvailability2 = dao.getAvailabilityByListingAndStartDate(booking.listings_listing_id(), booking.end_date());
-            if (affectedAvailability2 != null
-                    && affectedAvailability2.price_per_night().equals(bookingPricePerNight)) {
-                newAvailabilityEndDate = affectedAvailability2.end_date();
-                dao.deleteAvailability(affectedAvailability2.availability_id());
-            }
-            dao.insertAvailability(new Availability(null, newAvailabilityStartDate, newAvailabilityEndDate,
-                    bookingPricePerNight,
-                    booking.listings_listing_id()));
-            dao.commitTransaction();
-        } catch (DataAccessException e) {
-            dao.rollbackTransaction();
-            throw new ServiceException(String.format("Unable to cancel booking."), e);
+        // check if booking exists
+        if (!dao.bookingExists(booking_id)) {
+            throw new ServiceException(String.format("Booking with id, %d, does not exist.", booking_id));
         }
+
+        // get booking
+        Booking booking = null;
+        try {
+            booking = dao.getBooking(booking_id);
+        } catch (DataAccessException e) {
+            throw new ServiceException(String.format("Unable to retrieve booking."), e);
+        }
+        if (booking.start_date().isBefore(currentDate)) {
+            throw new ServiceException(String.format("Not allowed to cancel booking because booking has already started."));
+        }
+
+        // delete booking
+        dao.deleteBooking(booking_id);
+
+        // insert cancelled booking
+        dao.insertCancelledBooking(new CancelledBooking(null, booking.start_date(), booking.end_date(), booking.transaction_date(),
+                booking.amount(), booking.payment_method(), booking.card_number(), booking.tenant_sin(), booking.listings_listing_id()));
+
+        // re-insert availability
+        LocalDate newAvailabilityStartDate = booking.start_date(); // To be reset if affectedAvailability exists
+        LocalDate newAvailabilityEndDate = booking.end_date(); // To be reset if affectedAvailability exists
+        BigDecimal bookingPricePerNight = booking.amount().divide(
+                BigDecimal.valueOf(ChronoUnit.DAYS.between(booking.start_date(), booking.end_date())));
+
+        // get affected availabilities (two possible cases)
+        // Case 1: there is an availability whose end_date is the same as booking start_date and price_per_night is the same as booking
+        Availability affectedAvailability1 = dao.getAvailabilityByListingAndEndDate(booking.listings_listing_id(), booking.start_date());
+        if (affectedAvailability1 != null
+                && affectedAvailability1.price_per_night().equals(bookingPricePerNight)) {
+            newAvailabilityStartDate = affectedAvailability1.start_date();
+            dao.deleteAvailability(affectedAvailability1.availability_id());
+        }
+        // Case 2: there is an availability whose start_date is the same as booking end_date and price_per_night is the same as booking
+        Availability affectedAvailability2 = dao.getAvailabilityByListingAndStartDate(booking.listings_listing_id(), booking.end_date());
+        if (affectedAvailability2 != null
+                && affectedAvailability2.price_per_night().equals(bookingPricePerNight)) {
+            newAvailabilityEndDate = affectedAvailability2.end_date();
+            dao.deleteAvailability(affectedAvailability2.availability_id());
+        }
+        dao.insertAvailability(new Availability(null, newAvailabilityStartDate, newAvailabilityEndDate,
+                bookingPricePerNight,
+                booking.listings_listing_id()));
     }
 
     public List<Booking> getBookings() throws ServiceException {
         try {
             dao.startTransaction();
             List<Booking> bookings = dao.getBookings();
+            dao.commitTransaction();
+            return bookings;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve bookings."), e);
+        }
+    }
+
+    public List<Booking> getBookingsOfHost(Long host_sin) throws ServiceException {
+        try {
+            dao.startTransaction();
+            if (!dao.userExists(host_sin)) {
+                throw new ServiceException(String.format("User with sin, %d, does not exist.", host_sin));
+            }
+            List<Booking> bookings = dao.getHostBookings(host_sin);
             dao.commitTransaction();
             return bookings;
         } catch (Exception e) {
@@ -460,6 +474,18 @@ public class BookingService {
         }
     }
 
+    public List<Review> getReviews() throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Review> reviews = dao.getReviews();
+            dao.commitTransaction();
+            return reviews;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve reviews."), e);
+        }
+    }
+
     public List<Review> getReviewsOfListing(Long listing_id) throws ServiceException {
         try {
             dao.startTransaction();
@@ -487,10 +513,33 @@ public class BookingService {
         }
     }
 
+    public List<Review> getReviewsAsTenant(Long tenantId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Review> reviews = dao.getReviewsAsTenant(tenantId);
+            dao.commitTransaction();
+            return reviews;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve reviews."), e);
+        }
+    }
+
+    public List<Review> getReviewsAsHost(Long hostId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Review> reviews = dao.getReviewsAsHost(hostId);
+            dao.commitTransaction();
+            return reviews;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve reviews."), e);
+        }
+    }
+
     public Date getCurrDate() throws ServiceException {
         try {
             dao.startTransaction();
-            System.out.println(dao.getCurrentDate());
             Date currDate = dao.getCurrentDate();
             dao.commitTransaction();
             return currDate;

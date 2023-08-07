@@ -1,0 +1,769 @@
+[
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "Corktown, Toronto, ON M5A, Canada",
+    "postal_code": "M5A",
+    "location": {
+      "longitude": -79.359932,
+      "latitude": 43.654787
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 3
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "1361 Birchmount Rd, Scarborough, ON M1P 2E2, Canada",
+    "postal_code": "M1P 2E2",
+    "location": {
+      "longitude": -79.28504749999999,
+      "latitude": 43.7489707
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 3
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Bathurst Manor, Toronto, ON M3H, Canada",
+    "postal_code": "M3H",
+    "location": {
+      "longitude": -79.4568858,
+      "latitude": 43.7628233
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 3
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "350 Victoria St, Toronto, ON M5B 2K3, Canada",
+    "postal_code": "M5B 2K3",
+    "location": {
+      "longitude": -79.3788017,
+      "latitude": 43.6576585
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 3
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Grand Central Terminal, 89 E 42nd St, New York, NY 10017, USA",
+    "postal_code": "10017",
+    "location": {
+      "longitude": -73.9772294,
+      "latitude": 40.7527262
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 3
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "99 High St, Boston, MA 02129, USA",
+    "postal_code": "02129",
+    "location": {
+      "longitude": -71.0547594,
+      "latitude": 42.354188
+    },
+    "city": "Boston",
+    "country": "United States",
+    "users_sin": 3
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "160 Kendal Ave, Toronto, ON M5R 1M3, Canada",
+    "postal_code": "M5R 1M3",
+    "location": {
+      "longitude": -79.41072840000001,
+      "latitude": 43.6760427
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 3
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "Church St \u0026 Wellesley St E, Toronto, ON M4Y 1G2, Canada",
+    "postal_code": "M4Y 1G2",
+    "location": {
+      "longitude": -79.38094819999999,
+      "latitude": 43.6657119
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 3
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "New York, NY 10004, USA",
+    "postal_code": "10004",
+    "location": {
+      "longitude": -74.04450039999999,
+      "latitude": 40.6892494
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 4
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "Brooklyn Bridge, New York, NY 10038, USA",
+    "postal_code": "10038",
+    "location": {
+      "longitude": -73.9968643,
+      "latitude": 40.7060855
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 4
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "140 Commonwealth Ave, Chestnut Hill, MA 02467, USA",
+    "postal_code": "02467",
+    "location": {
+      "longitude": -71.16849450000001,
+      "latitude": 42.3355488
+    },
+    "city": null,
+    "country": "United States",
+    "users_sin": 4
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "200 Central Park West, New York, NY 10024, USA",
+    "postal_code": "10024",
+    "location": {
+      "longitude": -73.9739882,
+      "latitude": 40.7813241
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 5
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "Peace Tower, Ottawa, ON K1A 0A9, Canada",
+    "postal_code": "K1A 0A9",
+    "location": {
+      "longitude": -75.6999507,
+      "latitude": 45.4251189
+    },
+    "city": "Ottawa",
+    "country": "Canada",
+    "users_sin": 5
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "1260 6th Ave, New York, NY 10020, USA",
+    "postal_code": "10020",
+    "location": {
+      "longitude": -73.9799772,
+      "latitude": 40.75997599999999
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 6
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Wendy Crescent, Toronto, ON M3H, Canada",
+    "postal_code": "M3H",
+    "location": {
+      "longitude": -79.433231,
+      "latitude": 43.7395789
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 6
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "40 Bay St., Toronto, ON M5J 2X2, Canada",
+    "postal_code": "M5J 2X2",
+    "location": {
+      "longitude": -79.3790989,
+      "latitude": 43.6434661
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 6
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "2000 Meadowvale Rd, Toronto, ON M1B 5K7, Canada",
+    "postal_code": "M1B 5K7",
+    "location": {
+      "longitude": -79.1815077,
+      "latitude": 43.8206623
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 6
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "205 Humber College Blvd, Etobicoke, ON M9W 5L7, Canada",
+    "postal_code": "M9W 5L7",
+    "location": {
+      "longitude": -79.6065799,
+      "latitude": 43.7288232
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 6
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "Kensington Market, Toronto, ON M5T, Canada",
+    "postal_code": "M5T",
+    "location": {
+      "longitude": -79.4014566,
+      "latitude": 43.6545236
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 6
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "240 McLeod St, Ottawa, ON K2P 2R1, Canada",
+    "postal_code": "K2P 2R1",
+    "location": {
+      "longitude": -75.6886373,
+      "latitude": 45.4127661
+    },
+    "city": "Ottawa",
+    "country": "Canada",
+    "users_sin": 6
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "Toronto, ON M1P 0C4, Canada",
+    "postal_code": "M1P 0C4",
+    "location": {
+      "longitude": -79.25645420000001,
+      "latitude": 43.7769017
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 6
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "100 Queen St W, Toronto, ON M5H 2N2, Canada",
+    "postal_code": "M5H 2N2",
+    "location": {
+      "longitude": -79.3840901,
+      "latitude": 43.6534399
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 7
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Koreatown, Toronto, ON M6G, Canada",
+    "postal_code": "M6G",
+    "location": {
+      "longitude": -79.4165838,
+      "latitude": 43.6639433
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 7
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Distillery District, Toronto, ON M5A, Canada",
+    "postal_code": "M5A",
+    "location": {
+      "longitude": -79.35958,
+      "latitude": 43.65030549999999
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 7
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "360 Huntington Ave, Boston, MA 02115, USA",
+    "postal_code": "02115",
+    "location": {
+      "longitude": -71.0898892,
+      "latitude": 42.339904
+    },
+    "city": "Boston",
+    "country": "United States",
+    "users_sin": 8
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "100 Queens Park, Toronto, ON M5S 2C6, Canada",
+    "postal_code": "M5S 2C6",
+    "location": {
+      "longitude": -79.3947771,
+      "latitude": 43.6677097
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 8
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "317 Dundas St W, Toronto, ON M5T 1G4, Canada",
+    "postal_code": "M5T 1G4",
+    "location": {
+      "longitude": -79.39251229999999,
+      "latitude": 43.6536066
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 8
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "40 Bay St., Toronto, ON M5J 2X2, Canada",
+    "postal_code": "M5J 2X2",
+    "location": {
+      "longitude": -79.3790989,
+      "latitude": 43.6434661
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 8
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "1071 5th Ave, New York, NY 10128, USA",
+    "postal_code": "10128",
+    "location": {
+      "longitude": -73.9589706,
+      "latitude": 40.7829796
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 9
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Massachusetts Hall, Cambridge, MA 02138, USA",
+    "postal_code": "02138",
+    "location": {
+      "longitude": -71.1182488,
+      "latitude": 42.3744368
+    },
+    "city": "Cambridge",
+    "country": "United States",
+    "users_sin": 9
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "770 Don Mills Rd., North York, ON M3C 1T3, Canada",
+    "postal_code": "M3C 1T3",
+    "location": {
+      "longitude": -79.33892639999999,
+      "latitude": 43.7169351
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 9
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "1 Dundas St E, Toronto, ON M5B 2R8, Canada",
+    "postal_code": "M5B 2R8",
+    "location": {
+      "longitude": -79.3801714,
+      "latitude": 43.6560811
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 10
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "20 W 34th St., New York, NY 10001, USA",
+    "postal_code": "10001",
+    "location": {
+      "longitude": -73.98566439999999,
+      "latitude": 40.7484405
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 10
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "1 Vimy Pl, Ottawa, ON K1A 0M8, Canada",
+    "postal_code": "K1A 0M8",
+    "location": {
+      "longitude": -75.7169418,
+      "latitude": 45.4171032
+    },
+    "city": "Ottawa",
+    "country": "Canada",
+    "users_sin": 10
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "1 Blue Jays Way, Toronto, ON M5V 1J1, Canada",
+    "postal_code": "M5V 1J1",
+    "location": {
+      "longitude": -79.38914369999999,
+      "latitude": 43.64177979999999
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 10
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "290 Bremner Blvd, Toronto, ON M5V 3L9, Canada",
+    "postal_code": "M5V 3L9",
+    "location": {
+      "longitude": -79.3870568,
+      "latitude": 43.6425662
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 11
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "874 Collier St, Toronto, ON M4W 2G8, Canada",
+    "postal_code": "M4W 2G8",
+    "location": {
+      "longitude": -79.38691930000002,
+      "latitude": 43.6720918
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 11
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "45 Rockefeller Plaza, New York, NY 10111, USA",
+    "postal_code": "10111",
+    "location": {
+      "longitude": -73.9786736,
+      "latitude": 40.7587402
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 11
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Toronto, ON M5E 1C3, Canada",
+    "postal_code": "M5E 1C3",
+    "location": {
+      "longitude": -79.3715454,
+      "latitude": 43.6486879
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 11
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "ByWard Market, Ottawa, ON K1N, Canada",
+    "postal_code": "K1N",
+    "location": {
+      "longitude": -75.6911592,
+      "latitude": 45.4288655
+    },
+    "city": "Ottawa",
+    "country": "Canada",
+    "users_sin": 11
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "100 Rue Laurier, Gatineau, QC K1A 0M8, Canada",
+    "postal_code": "K1A 0M8",
+    "location": {
+      "longitude": -75.7092006,
+      "latitude": 45.4301581
+    },
+    "city": "Gatineau",
+    "country": "Canada",
+    "users_sin": 11
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "285 Fulton St, New York, NY 10007, USA",
+    "postal_code": "10007",
+    "location": {
+      "longitude": -74.0133795,
+      "latitude": 40.7127431
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 12
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Wellington St, Ottawa, ON K1A 0A9, Canada",
+    "postal_code": "K1A 0A9",
+    "location": {
+      "longitude": -75.700929,
+      "latitude": 45.4235937
+    },
+    "city": "Ottawa",
+    "country": "Canada",
+    "users_sin": 12
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "1750 Finch Ave E, North York, ON M2J 2X5, Canada",
+    "postal_code": "M2J 2X5",
+    "location": {
+      "longitude": -79.3485918,
+      "latitude": 43.79602939999999
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 12
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "288 Bremner Blvd, Toronto, ON M5V 3L9, Canada",
+    "postal_code": "M5V 3L9",
+    "location": {
+      "longitude": -79.3866022,
+      "latitude": 43.6421785
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 12
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Allenby, Toronto, ON M5N, Canada",
+    "postal_code": "M5N",
+    "location": {
+      "longitude": -79.41271429999999,
+      "latitude": 43.7077457
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 13
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "5th Ave, New York, NY 10022, USA",
+    "postal_code": "10022",
+    "location": {
+      "longitude": -73.9761953,
+      "latitude": 40.7586117
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 13
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Boston, MA 02215, USA",
+    "postal_code": "02215",
+    "location": {
+      "longitude": -71.1053991,
+      "latitude": 42.3504997
+    },
+    "city": "Boston",
+    "country": "United States",
+    "users_sin": 13
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "419 Boston Ave, Medford, MA 02155, USA",
+    "postal_code": "02155",
+    "location": {
+      "longitude": -71.1182729,
+      "latitude": 42.4085371
+    },
+    "city": "Medford",
+    "country": "United States",
+    "users_sin": 13
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "385 Sussex Dr, Ottawa, ON K1N 1J9, Canada",
+    "postal_code": "K1N 1J9",
+    "location": {
+      "longitude": -75.69619600000001,
+      "latitude": 45.4299128
+    },
+    "city": "Ottawa",
+    "country": "Canada",
+    "users_sin": 14
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "Toronto Islands, Toronto, ON M5J 1X9, Canada",
+    "postal_code": "M5J 1X9",
+    "location": {
+      "longitude": -79.3821859,
+      "latitude": 43.6165666
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 14
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Apartment",
+    "address": "100 Queen St W, Toronto, ON M5H 2N1, Canada",
+    "postal_code": "M5H 2N1",
+    "location": {
+      "longitude": -79.38341369999999,
+      "latitude": 43.6527069
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 15
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "The High Line, New York, NY 10011, USA",
+    "postal_code": "10011",
+    "location": {
+      "longitude": -74.0047649,
+      "latitude": 40.7479925
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 16
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "High Park, 1873 Bloor St W, Toronto, ON M6R 2Z3, Canada",
+    "postal_code": "M6R 2Z3",
+    "location": {
+      "longitude": -79.4636903,
+      "latitude": 43.64654789999999
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 16
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "235 Queens Quay W, Toronto, ON M5J 2G8, Canada",
+    "postal_code": "M5J 2G8",
+    "location": {
+      "longitude": -79.3818785,
+      "latitude": 43.638834
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 17
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Hotel",
+    "address": "11 W 53rd St, New York, NY 10019, USA",
+    "postal_code": "10019",
+    "location": {
+      "longitude": -73.97762159999999,
+      "latitude": 40.7614327
+    },
+    "city": "New York",
+    "country": "United States",
+    "users_sin": 17
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "380 Sussex Dr, Ottawa, ON K1N 9N4, Canada",
+    "postal_code": "K1N 9N4",
+    "location": {
+      "longitude": -75.6989062,
+      "latitude": 45.429535
+    },
+    "city": "Ottawa",
+    "country": "Canada",
+    "users_sin": 17
+  },
+  {
+    "listing_id": null,
+    "listing_type": "Guesthouse",
+    "address": "Chinatown, Toronto, ON M5T, Canada",
+    "postal_code": "M5T",
+    "location": {
+      "longitude": -79.39805799999999,
+      "latitude": 43.6529286
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 17
+  },
+  {
+    "listing_id": null,
+    "listing_type": "House",
+    "address": "Queens Park, Toronto, ON M5S, Canada",
+    "postal_code": "M5S",
+    "location": {
+      "longitude": -79.3935293,
+      "latitude": 43.6672424
+    },
+    "city": "Toronto",
+    "country": "Canada",
+    "users_sin": 17
+  }
+]

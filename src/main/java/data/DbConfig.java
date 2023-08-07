@@ -88,13 +88,13 @@ public class DbConfig {
             createTableSql = "CREATE TABLE listings (" +
                     "listing_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE," +
                     "listing_type char(10)  NOT NULL," +
-                    "address varchar(30)  NOT NULL," +
+                    "address varchar(100)  NOT NULL," +
                     "postal_code varchar(12)  NOT NULL," +
-                    "longitude decimal(9,6)  NOT NULL," +
-                    "latitude decimal(9,6)  NOT NULL," +
+                    "location POINT NOT NULL," +
                     "city varchar(20)  NOT NULL," +
                     "country varchar(20)  NOT NULL," +
                     "users_sin BIGINT  NOT NULL," +
+                    "SPATIAL INDEX(location)," +
                     "PRIMARY KEY (listing_id)" +
                     ");";
             stmt = conn.prepareStatement(createTableSql);
@@ -153,10 +153,10 @@ public class DbConfig {
             // users table
             createTableSql = "CREATE TABLE users (" +
                     "sin BIGINT NOT NULL," +
-                    "name varchar(20)  NOT NULL," +
-                    "address varchar(30)  NULL," +
+                    "name varchar(40)  NOT NULL," +
+                    "address varchar(100)  NULL," +
                     "birthdate date  NOT NULL," +
-                    "occupation varchar(20)  NULL," +
+                    "occupation varchar(40)  NULL," +
                     "PRIMARY KEY (sin)" +
                     ");";
             stmt = conn.prepareStatement(createTableSql);

@@ -4,16 +4,15 @@ import data.Dao;
 import domain.Amenity;
 import domain.Availability;
 import domain.Listing;
-import domain.User;
 import exception.DataAccessException;
 import exception.ServiceException;
 import filter.ListingFilter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.awt.geom.Point2D;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ListingService {
@@ -32,6 +31,12 @@ public class ListingService {
                         String.format(
                                 "Unable to add listing because listing at %s, %s. %s already exists",
                                 listing.country(), listing.city(), listing.postal_code()));
+            }
+            if (!dao.userExists(listing.users_sin())) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to add listing because user with sin, %d, doesn't exist",
+                                listing.users_sin()));
             }
             Long listingID = dao.insertListing(listing);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
@@ -131,21 +136,20 @@ public class ListingService {
                         String.format("Unable to get listings because user with sin, %d, doesn't exist", sin));
             }
             List<Listing> listings = dao.getListingsByFilter(
-                    new ListingFilter(
-                            new Listing(
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    sin
-                            ),
-                            null,
-                            null
-                    )
+                    new ListingFilter.Builder()
+                            .withListing(
+                                new Listing(
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        sin
+                                )
+                            )
+                            .build()
             );
             dao.commitTransaction();  // Commit transaction if all operations succeeded
             return listings;
@@ -179,6 +183,33 @@ public class ListingService {
         } catch (Exception e) {
             dao.rollbackTransaction();  // Rollback transaction if any operation failed
             throw new ServiceException("An error occured while adding amenity", e);
+        }
+    }
+
+    public void removeAmenityFromListing(Long listingID, Long userSin, String amenity) throws ServiceException {
+        try {
+            dao.startTransaction();
+            Listing listing = dao.getListingById(listingID);
+            if (listing == null) {
+                throw new ServiceException(
+                        String.format("Unable to remove amenity because listing with id, %d, doesn't exist", listingID));
+            }
+            if (!listing.users_sin().equals(userSin)) {
+                throw new ServiceException(
+                        String.format("Unable to remove amenity because listing with id, %d, doesn't belong to user with sin, %d", listingID, userSin));
+            }
+            if (!dao.listingHasAmenity(listing.listing_id(), amenity)) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to remove amenity because listing at %s, %s. %s doesn't have amenity %s",
+                                listing.country(), listing.city(), listing.postal_code(), amenity));
+            }
+            
+            dao.deleteAmenityForListing(listing.listing_id(), amenity);
+            dao.commitTransaction();
+        } catch (Exception e) {
+            dao.rollbackTransaction();  // Rollback transaction if any operation failed
+            throw new ServiceException("An error occured while removing amenity", e);
         }
     }
 
@@ -267,7 +298,7 @@ public class ListingService {
         }
     }
 
-    public void addAvailability(Availability availability, Long userSin) throws ServiceException {
+    public void addAvailability(Availability availability, Long userSin, LocalDate currentDate) throws ServiceException {
         try {
             dao.startTransaction();
             Listing listing = dao.getListingById(availability.listings_listing_id());
@@ -279,7 +310,7 @@ public class ListingService {
                 throw new ServiceException(
                         String.format("Unable to add availability because listing with id, %d, doesn't belong to user with sin, %d", availability.listings_listing_id(), userSin));
             }
-            if (doesDateOverlapWithExistingAvailability(availability)) {
+            if (doesDateOverlapWithExistingAvailability(availability, currentDate)) {
                 throw new ServiceException(
                         String.format(
                                 "Unable to add availability because availability overlaps with existing availability",
@@ -342,7 +373,7 @@ public class ListingService {
 
     // Helper method to check if date range overlaps with existing availability
     // Note: we do not use start and commit transaction here because this method is used within a transaction
-    private boolean doesDateOverlapWithExistingAvailability(Availability availability) throws ServiceException {
+    private boolean doesDateOverlapWithExistingAvailability(Availability availability, LocalDate currentDate) throws ServiceException {
         try {
             // Check if listing exists
             if (!dao.listingIdExists(availability.listings_listing_id())) {
@@ -358,7 +389,7 @@ public class ListingService {
                                 availability.start_date(), availability.end_date()));
             }
 
-            List<Availability> availabilities = dao.getAvailabilitiesOfListing(availability.listings_listing_id());
+            List<Availability> availabilities = dao.getAvailabilitiesOfListing(availability.listings_listing_id(), currentDate);
 
             for (int i = 0; i<availabilities.size(); i++) {
                 // Check if date range overlaps with existing availability
@@ -400,7 +431,7 @@ public class ListingService {
         }
     }
 
-    public void changeListingAvailability(long listingId, Long userSin, LocalDate prevStartDate, LocalDate prevEndDate,
+    public void changeListingAvailability(Long listingId, Long userSin, LocalDate prevStartDate, LocalDate prevEndDate,
             LocalDate newStartDate, LocalDate newEndDate) throws ServiceException {
         try {
             dao.startTransaction();
@@ -439,7 +470,7 @@ public class ListingService {
         }
     }
 
-    public List<Availability> getAvailabilitiesOfListing(Long listing_id) throws ServiceException {
+    public List<Availability> getAvailabilitiesOfListing(Long listing_id, LocalDate currentDate) throws ServiceException {
         try {
             dao.startTransaction();  // Begin transaction
             if (!dao.listingIdExists(listing_id)) {
@@ -447,7 +478,7 @@ public class ListingService {
                         String.format("Unable to get availabilities because listing with id, %d, doesn't exist",
                                 listing_id));
             }
-            List<Availability> availabilities = dao.getAvailabilitiesOfListing(listing_id);
+            List<Availability> availabilities = dao.getAvailabilitiesOfListing(listing_id, currentDate);
             dao.commitTransaction();  // Commit transaction if all operations succeeded
             return availabilities;
         } catch (Exception e) {
@@ -489,7 +520,48 @@ public class ListingService {
         // ============= Search methods =============
     public List<Listing> searchListingsByFilter(ListingFilter filter) throws ServiceException {
         try {
-            dao.startTransaction();
+            dao.startTransaction();;
+            if ((filter.listing().address() != null || filter.listing().postal_code() != null)
+                    && filter.searchRadius() != null && filter.listing().location() == null) {
+                // get the coordinates of the address
+                // Note: only search by address or postal code, disregard everything else
+                // create new filter with only the address and postal code
+                ListingFilter tempFilter = new ListingFilter.Builder()
+                        .withListing(
+                                new Listing(
+                                        null,
+                                        null,
+                                        filter.listing().address(),
+                                        filter.listing().postal_code(),
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                )
+                        )
+                        .build();
+                List<Listing> listingsTemp = dao.getListingsByFilter(tempFilter);
+                if (listingsTemp.size() == 0) {
+                    dao.rollbackTransaction();
+                    return listingsTemp;
+                } else {
+                    Point2D addressCoordinates = listingsTemp.get(0).location();
+                    /* update filter with the coordinates. Create a new listing record, using all listing parameters from filter.listing() except
+                     for address, postal code, and add addressCoordinates */
+                    filter.updateListing(
+                            new Listing(
+                                    filter.listing().listing_id(),
+                                    filter.listing().listing_type(),
+                                    null, // set to null because we are using the coordinates to search. If we set the address, the search will be done using this exact address
+                                    null, // the same reason as above
+                                    addressCoordinates,
+                                    filter.listing().city(),
+                                    filter.listing().country(),
+                                    filter.listing().users_sin()
+                            )
+                    );
+                }
+            }
             List<Listing> listings = dao.getListingsByFilter(filter);
             dao.commitTransaction();
             return listings;

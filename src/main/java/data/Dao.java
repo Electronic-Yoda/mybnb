@@ -6,12 +6,15 @@ import exception.DataAccessException;
 import filter.ListingFilter;
 import filter.UserFilter;
 
+import java.awt.geom.Point2D;
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Dao {
     private final String url;
@@ -89,7 +92,12 @@ public class Dao {
         Connection conn = threadLocalConnection.get(); // Note: this is the thread-local connection! We close this at the end of the transaction
         try (PreparedStatement stmt = conn.prepareStatement(query.sql(), Statement.RETURN_GENERATED_KEYS)) {
             for (int i = 0; i < query.parameters().length; i++) {
-                stmt.setObject(i + 1, query.parameters()[i]);
+                if (query.parameters()[i] instanceof Point2D) {
+                    String pointWkt = String.format("POINT(%f %f)", ((Point2D) query.parameters()[i]).getX(), ((Point2D) query.parameters()[i]).getY());
+                    stmt.setString(i + 1, pointWkt);
+                } else {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
             }
             stmt.executeUpdate();
             try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
@@ -102,6 +110,7 @@ public class Dao {
         }
     }
 
+    // Note: will not work for geometry types
     private SqlQuery getInsertStatement(Object domainObject, String tableName) {
         StringBuilder sql = new StringBuilder("INSERT INTO ");
         sql.append(tableName + " (");
@@ -231,15 +240,27 @@ public class Dao {
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
-                stmt.setObject(i + 1, query.parameters()[i]);
+                if (query.parameters()[i] instanceof Point2D) {
+                    String pointWkt = String.format("POINT(%f %f)", ((Point2D) query.parameters()[i]).getX(), ((Point2D) query.parameters()[i]).getY());
+                    stmt.setString(i + 1, pointWkt);
+                } else {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
             }
             ResultSet rs = stmt.executeQuery();
             List<Listing> listings = new ArrayList<>();
             while (rs.next()) {
+                String wkt = rs.getString("location_wkt");
+                Matcher matcher = Pattern.compile("POINT\\s*\\(\\s*(-?\\d+\\.?\\d*)\\s+(-?\\d+\\.?\\d*)\\s*\\)").matcher(wkt);
+                Point2D location = null;
+                if (matcher.find()) {
+                    double longitude = Double.parseDouble(matcher.group(1));
+                    double latitude = Double.parseDouble(matcher.group(2));
+                    location = new Point2D.Double(longitude, latitude);
+                }
                 listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"),
                         rs.getString("address"), rs.getString("postal_code"),
-                        rs.getBigDecimal("longitude"), rs.getBigDecimal("latitude"),
-                        rs.getString("city"), rs.getString("country"),
+                        location, rs.getString("city"), rs.getString("country"),
                         rs.getLong("users_sin")));
             }
             return listings;
@@ -248,15 +269,20 @@ public class Dao {
 
 
     public Long insertListing(Listing listing) {
+        // Not using getInsertStatement because of the location field is not supported by JDBC
+        SqlQuery sql = new SqlQuery("INSERT INTO listings (listing_type, address, postal_code, location, city, country, users_sin) " +
+                "VALUES (?, ?, ?, ST_GeomFromText(?), ?, ?, ?)",
+                listing.listing_type(), listing.address(), listing.postal_code(),
+                listing.location(), listing.city(), listing.country(), listing.users_sin());
         try {
-            return executeStatement(getInsertStatement(listing, "listings"));
+            return executeStatement(sql);
         } catch (SQLException e) {
             throw new DataAccessException("Error inserting listing", e);
         }
     }
 
     public boolean listingExists(Listing listing) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
                 listing.postal_code(), listing.city(), listing.country());
         try {
             return !executeListingQuery(query).isEmpty();
@@ -266,7 +292,7 @@ public class Dao {
     }
 
     public Listing getListingByLocation(String postal_code, String city, String country) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
                 postal_code, city, country);
         try {
             List<Listing> listings = executeListingQuery(query);
@@ -281,7 +307,7 @@ public class Dao {
     }
 
     public List<Listing> getListingsByHostSin(Long host_sin) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE users_sin = ?", host_sin);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE users_sin = ?", host_sin);
         try {
             return executeListingQuery(query);
         } catch (SQLException e) {
@@ -290,7 +316,7 @@ public class Dao {
     }
 
     public boolean listingIdExists(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listing_id);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE listing_id = ?", listing_id);
         try {
             return !executeListingQuery(query).isEmpty();
         } catch (SQLException e) {
@@ -299,7 +325,7 @@ public class Dao {
     }
 
     public Listing getListingById(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ?", listing_id);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE listing_id = ?", listing_id);
         try {
             return executeListingQuery(query).get(0);
         } catch (SQLException e) {
@@ -341,7 +367,7 @@ public class Dao {
     }
 
     public boolean doesCityExists(String city) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE city = ?", city);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE city = ?", city);
         try {
             return !executeListingQuery(query).isEmpty();
         } catch (SQLException e) {
@@ -350,7 +376,7 @@ public class Dao {
     }
 
     public boolean doesListingIdHaveHostSin(Long listing_id, Long host_sin) {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings WHERE listing_id = ? AND users_sin = ?", listing_id, host_sin);
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE listing_id = ? AND users_sin = ?", listing_id, host_sin);
 
         try {
             return !executeListingQuery(query).isEmpty();
@@ -369,7 +395,7 @@ public class Dao {
     }
 
     public List<Listing> getListings() {
-        SqlQuery query = new SqlQuery("SELECT * FROM listings");
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings");
         try {
             return executeListingQuery(query);
         } catch (SQLException e) {
@@ -379,7 +405,7 @@ public class Dao {
 
 
     public List<Listing> getListingsByFilter(ListingFilter filter) {
-        StringBuilder sql = new StringBuilder("SELECT listings.* FROM listings ");
+        StringBuilder sql = new StringBuilder("SELECT DISTINCT listings.*, ST_AsText(location) as location_wkt FROM listings ");
         List<Object> parameters = new ArrayList<>();
 
         // join with availabilities table if availability filter is not empty
@@ -401,8 +427,28 @@ public class Dao {
                 try {
                     Object value = component.getAccessor().invoke(filter.listing());
                     if (value != null) {
-                        sql.append(" AND " + component.getName() + " = ?");
-                        parameters.add(value);
+                        if (component.getName().equals("listing_type") && filter.listingTypes() != null) {
+                            sql.append(" AND listing_type IN (");
+                            for (int i = 0; i < filter.listingTypes().size(); i++) {
+                                sql.append("?");
+                                parameters.add(filter.listingTypes().get(i));
+                                if (i < filter.listingTypes().size() - 1) {
+                                    sql.append(", ");
+                                }
+                            }
+                            sql.append(")");
+                        } else if (component.getName().equals("location") && filter.searchRadius() != null) {
+                            // sql.append(" AND ST_Distance_Sphere(location, ST_MakePoint(?, ?)) <= ?");
+                            // parameters.add(((Point2D) value).getX());
+                            // parameters.add(((Point2D) value).getY());
+                            // ST_MakePoint is not supported by this version of mysql. Use ST_GeomFromText instead
+                            sql.append(" AND ST_Distance_Sphere(location, ST_GeomFromText(?)) <= ?");
+                            parameters.add(value);
+                            parameters.add(filter.searchRadius().multiply(BigDecimal.valueOf(100))); // convert km to m since ST_Distance_Sphere returns distance in m
+                        } else {
+                            sql.append(" AND " + component.getName() + " = ?");
+                            parameters.add(value);
+                        }
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -414,14 +460,25 @@ public class Dao {
             for (RecordComponent component : filter.availability().getClass().getRecordComponents()) {
                 try {
                     Object value = component.getAccessor().invoke(filter.availability());
-                    if (value != null) {
-                        if (component.getName().equals("start_date")) {
-                            sql.append(" AND start_date >= ?");
-                        } else if (component.getName().equals("end_date")) {
-                            sql.append(" AND end_date <= ?");
-                        } else if (component.getName().equals("price_per_night")) {
-                            sql.append(" AND price_per_night <= ?");
-                        }
+                    if (component.getName().equals("start_date") && filter.startDateRange() != null) {
+                        sql.append(" AND start_date >= ?");
+                        parameters.add(filter.startDateRange());
+                    } else if (component.getName().equals("end_date") && filter.endDateRange() != null) {
+                        sql.append(" AND end_date <= ?");
+                        parameters.add(filter.endDateRange());
+                    } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() != null && filter.maxPricePerNight() != null) {
+                        sql.append(" AND price_per_night >= ?");
+                        parameters.add(filter.minPricePerNight());
+                        sql.append(" AND price_per_night <= ?");
+                        parameters.add(filter.maxPricePerNight());
+                    } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() != null && filter.maxPricePerNight() == null) {
+                        sql.append(" AND price_per_night >= ?");
+                        parameters.add(filter.minPricePerNight());
+                    } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() == null && filter.maxPricePerNight() != null) {
+                        sql.append(" AND price_per_night <= ?");
+                        parameters.add(filter.maxPricePerNight());
+                    } else if (value != null) {
+                        sql.append(" AND " + component.getName() + " = ?");
                         parameters.add(value);
                     }
                 } catch (Exception e) {
@@ -662,8 +719,10 @@ public class Dao {
         }
     }
 
-    public List<Availability> getAvailabilitiesOfListing(Long listing_id) {
-        SqlQuery query = new SqlQuery("SELECT * FROM availabilities WHERE listings_listing_id = ?", listing_id);
+    public List<Availability> getAvailabilitiesOfListing(Long listing_id, LocalDate currentDate) {
+//        SqlQuery query = new SqlQuery("SELECT * FROM availabilities WHERE listings_listing_id = ?", listing_id);
+        SqlQuery query = new SqlQuery("SELECT * FROM availabilities WHERE listings_listing_id = ? AND start_date >= ?",
+                listing_id, currentDate);
         try {
             return executeAvailabilityQuery(query);
         } catch (SQLException e) {
@@ -886,23 +945,22 @@ public class Dao {
         }
     }
 
-    // public Long getBookingId(Long listingId, LocalDate startDate, LocalDate endDate, Long host_sin, Long tenant_sin) {
-    //     SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listing_id = ? AND start_date = ? AND end_date = ? AND tenant_sin = ?",
-    //                                     listingId, startDate, endDate, tenant_sin);
-    //     try {
-    //         Booking booking = executeBookingQuery(query).get(0);
-    //         return booking.booking_id();
-    //     } catch (SQLException e) {
-    //         throw new DataAccessException("Error getting booking", e);
-    //     }
-    // }
-
     public List<Booking> getTenenatBookings(Long tenant_sin) {
         SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE tenant_sin = ?", tenant_sin);
         try {
             return executeBookingQuery(query);
         } catch (SQLException e) {
             throw new DataAccessException("Error getting tenant bookings", e);
+        }
+    }
+
+    public List<Booking> getHostBookings(Long host_sin) {
+        SqlQuery query = new SqlQuery("SELECT * FROM bookings WHERE listings_listing_id IN " +
+                "(SELECT listing_id FROM listings WHERE users_sin = ?)", host_sin);
+        try {
+            return executeBookingQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting host bookings", e);
         }
     }
 
@@ -998,6 +1056,28 @@ public class Dao {
             return executeReviewQuery(query);
         } catch (SQLException e) {
             throw new DataAccessException("Error getting all reviews", e);
+        }
+    }
+
+    public List<Review> getReviewsAsTenant(Long tenantId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM reviews WHERE bookings_booking_id IN " +
+                "(SELECT booking_id FROM bookings WHERE tenant_sin = ?)", tenantId);
+        try {
+            return executeReviewQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting reviews as tenant", e);
+        }
+    }
+
+    public List<Review> getReviewsAsHost(Long hostId) {
+        SqlQuery query = new SqlQuery("SELECT * FROM reviews WHERE bookings_booking_id IN " +
+                "(SELECT booking_id FROM bookings WHERE listings_listing_id IN " +
+                "(SELECT listing_id FROM listings WHERE users_sin = ?))", hostId);
+
+        try {
+            return executeReviewQuery(query);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting reviews as host", e);
         }
     }
 

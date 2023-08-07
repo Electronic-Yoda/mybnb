@@ -4,8 +4,8 @@ import data.Dao;
 import data.DbConfig;
 import domain.*;
 import exception.ServiceException;
-import service.*;
 
+import java.awt.geom.Point2D;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -57,8 +57,7 @@ public class serviceTest {
                 "house",
                 "123 Main St.",
                 "M5S 1A1",
-                new BigDecimal("43.66"),
-                new BigDecimal("79.40"),
+                new Point2D.Double(43.66, 79.40),
                 "Toronto",
                 "Canada",
                 user1.sin()
@@ -68,8 +67,7 @@ public class serviceTest {
                 "condo",
                 "111 Main St.",
                 "M5T 1C1",
-                new BigDecimal("42.11"),
-                new BigDecimal("79.40"),
+                new Point2D.Double(43.66, 79.40),
                 "Toronto",
                 "Canada",
                 user1.sin()
@@ -97,7 +95,7 @@ public class serviceTest {
                 1L
         );
         try {
-            listingService.addAvailability(availability1, 1L);
+            listingService.addAvailability(availability1, 1L, LocalDate.of(2023, 7, 20));
             availabilities = listingService.getAvailabilities();
         } catch (ServiceException e) {
             e.printStackTrace();
@@ -138,7 +136,7 @@ public class serviceTest {
         System.out.println("Availability after booking:");
         List<Availability> list1Availabilities = null;
         try {
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
@@ -195,7 +193,7 @@ public class serviceTest {
         // check if availability is updated
         System.out.println("Availability after cancelling booking:");
         try {
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
@@ -214,7 +212,7 @@ public class serviceTest {
                     LocalDate.parse("2023-09-12"),
                     LocalDate.parse("2023-09-20")
             );
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
@@ -244,7 +242,7 @@ public class serviceTest {
         // check if availability is updated
         System.out.println("Availability after booking:");
         try {
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
@@ -291,7 +289,7 @@ public class serviceTest {
                     LocalDate.parse("2023-09-20"),
                     new BigDecimal("400.00")
             );
-            list1Availabilities = listingService.getAvailabilitiesOfListing(1L);
+            list1Availabilities = listingService.getAvailabilitiesOfListing(1L, LocalDate.of(2023, 7, 20));
         } catch (ServiceException e) {
             e.printStackTrace();
         }
