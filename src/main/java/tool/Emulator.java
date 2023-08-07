@@ -283,10 +283,13 @@ public class Emulator {
                             country = component.longName;
                         } else if (Arrays.asList(component.types).contains(AddressComponentType.POSTAL_CODE)) {
                             String postalCode = component.shortName;
+                            // Get the short address (ex: 419 Boston Ave instead of 419 Boston Ave, Medford, MA 02155, USA)
+                            // this means take the string before the first comma
+                            String shortAddress = result.formattedAddress.substring(0, result.formattedAddress.indexOf(','));
                             Listing listing = new Listing(
                                     null, // listing_id can be generated based on your logic
                                     listingTypes[random.nextInt(listingTypes.length)],
-                                    result.formattedAddress,
+                                    shortAddress,
                                     postalCode,
                                     new Point2D.Double(result.geometry.location.lng, result.geometry.location.lat),
                                     city,  // Set real city
@@ -645,20 +648,25 @@ public class Emulator {
             }
             System.out.println("Cancelled Bookings:");
             bookingService.getCancelledBookings().forEach(System.out::println);
+
+            System.out.println("Number of users: " + userService.getUsers().size());
+            System.out.println("Number of listings: " + listingService.getListings().size());
+            System.out.println("Number of bookings: " + bookingService.getBookings().size());
+            System.out.println("Number of cancelled bookings: " + bookingService.getCancelledBookings().size());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     public static void main(String[] args) {
-        ConsoleLogger.setup();
-        Emulator emulator = new Emulator();
+//        ConsoleLogger.setup();
+//        Emulator emulator = new Emulator();
 //        emulator.generateUserAndListingFiles();
 
-        DbConfig dbConfig = new DbConfig();
-        dbConfig.resetTables();
-        emulator.loadDataToDatabase();
-        emulator.showLoadedData();
-        dbConfig.resetTables();
+//        DbConfig dbConfig = new DbConfig();
+//        dbConfig.resetTables();
+//        emulator.loadDataToDatabase();
+//        emulator.showLoadedData();
+//        dbConfig.resetTables();
     }
 }

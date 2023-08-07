@@ -139,10 +139,43 @@ Cancel booking as tenant or host.
 show mylistings
 
 **Description:** \
-Show all user's listings.
+Show all listings available based on filter options.
+
+All optional options are show below. When no options are specified, all listings will be shown.
+```agsl
+usage: show listings
+ -a,--address <arg>                          listing address
+ -amen,--amenities <arg>                     amenities (input a list of
+                                             amenities, separated by comma
+                                             followed by a space
+ -ci,--city <arg>                            listing city
+ -co,--country <arg>                         listing country
+ -ed,--end-date <arg>                        availability end date
+ -edr,--end-date-range <arg>                 availability end date range
+ -h,--help                                   show help
+ -l,--listing-id <arg>                       listing id
+ -la,--latitude <arg>                        listing latitude
+ -lo,--longitude <arg>                       listing longitude
+ -pc,--postal_code <arg>                     listing postal code
+ -ppn,--price-per-night <arg>                availability price per night
+ -pprMax,--price-per-night-range-max <arg>   availability price per night
+                                             range max
+ -pprMin,--price-per-night-range-min <arg>   availability price per night
+                                             range min
+ -rad,--search-radius <arg>                  Search radius. Defaults to 20
+                                             if address is not specified
+                                             and is not set
+ -s,--user-sin <arg>                         user sin
+ -sd,--start-date <arg>                      availability start date
+ -sdr,--start-date-range <arg>               availability start date range
+ -t,--listing types <arg>                    listing types, separated by
+                                             comma with a space
+<user 6> 
+```
 
 **Requirements:**
 * User must be logged in.
+* If an argument has spaces, each of the spaces must be replaced with the "_" character. Ex: "123 Main Street" -> "123_Main_Street".
 
 ## Show User's Bookings
 show mybookings

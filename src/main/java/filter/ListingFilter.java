@@ -71,6 +71,10 @@ public class ListingFilter {
         return endDateRange;
     }
 
+    public void updateListing(Listing listing) {
+        this.listing = listing;
+    }
+
 
     public static class Builder {
         private Listing listing;

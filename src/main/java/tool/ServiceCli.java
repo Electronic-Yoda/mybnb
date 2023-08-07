@@ -841,11 +841,11 @@ public class ServiceCli {
 
             // Listings filter options
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().desc("listing id").build());
-            options.addOption(Option.builder("t").longOpt("listing types").hasArg()
-                            .desc("listing types, separated by comma with a space").build());
+            options.addOption(Option.builder("t").longOpt("listing-types").hasArg()
+                            .desc("listing types, separated by comma").build());
             options.addOption(Option.builder("a").longOpt("address").hasArg()
                     .desc("listing address").build());
-            options.addOption(Option.builder("pc").longOpt("postal_code").hasArg()
+            options.addOption(Option.builder("pc").longOpt("postal-code").hasArg()
                     .desc("listing postal code").build());
             options.addOption(Option.builder("lo").longOpt("longitude").hasArg()
                     .desc("listing longitude").build());
@@ -872,18 +872,26 @@ public class ServiceCli {
                     .desc("availability end date range").build());
             options.addOption(Option.builder("ppn").longOpt("price-per-night").hasArg()
                     .desc("availability price per night").build());
-            options.addOption(Option.builder("pprMin").longOpt("price-per-night-range-min").hasArg()
+            options.addOption(Option.builder("ppnmin").longOpt("price-per-night-range-min").hasArg()
                     .desc("availability price per night range min").build());
-            options.addOption(Option.builder("pprMax").longOpt("price-per-night-range-max").hasArg()
+            options.addOption(Option.builder("ppnmax").longOpt("price-per-night-range-max").hasArg()
                     .desc("availability price per night range max").build());
 
             // Amenities filter options
-            options.addOption(Option.builder("a").longOpt("amenities").hasArg()
-                    .desc("amenities (input a list of amenities, separated by comma followed by a space").build());
+            options.addOption(Option.builder("amen").longOpt("amenities").hasArg()
+                    .desc("amenities (input a list of amenities, separated by comma").build());
 
+            // add help
+            options.addOption(Option.builder("h").longOpt("help").desc("show help").build());
+            HelpFormatter formatter = new HelpFormatter();
 
             CommandLineParser parser = new DefaultParser();
             CommandLine cmd = parser.parse(options, args);
+
+            if (cmd.hasOption("h")) {
+                formatter.printHelp("show listings", options);
+                return;
+            }
 
             Long listingId = cmd.hasOption("l") ? Long.parseLong(cmd.getOptionValue("l")) : null;
             String listingType = cmd.getOptionValue("t");
@@ -895,22 +903,22 @@ public class ServiceCli {
             String city = cmd.getOptionValue("ci");
             String country = cmd.getOptionValue("co");
             Long userSin = cmd.hasOption("s") ? Long.parseLong(cmd.getOptionValue("s")) : null;
-            BigDecimal searchRadius = cmd.hasOption("rad") ? new BigDecimal(cmd.getOptionValue("rad")) : ((address == null && location != null) ? defaultSearchRadius : null);
+            BigDecimal searchRadius = cmd.hasOption("rad") ? new BigDecimal(cmd.getOptionValue("rad")) :
+                    ((address == null && postalCode == null && location != null ) ? defaultSearchRadius : null);
 
             LocalDate startDate = cmd.getOptionValue("sd") != null ? LocalDate.parse(cmd.getOptionValue("sd")) : null;
             LocalDate endDate = cmd.getOptionValue("ed") != null ? LocalDate.parse(cmd.getOptionValue("ed")) : null;
             LocalDate startDateRange = cmd.getOptionValue("sdr") != null ? LocalDate.parse(cmd.getOptionValue("sdr")) : null;
             LocalDate endDateRange = cmd.getOptionValue("edr") != null ? LocalDate.parse(cmd.getOptionValue("edr")) : null;
             BigDecimal pricePerNight = cmd.getOptionValue("ppn") != null ? new BigDecimal(cmd.getOptionValue("ppn")) : null;
-            BigDecimal pricePerNightRangeMin = cmd.getOptionValue("pprMin") != null ? new BigDecimal(cmd.getOptionValue("pprMin")) : null;
-            BigDecimal pricePerNightRangeMax = cmd.getOptionValue("pprMax") != null ? new BigDecimal(cmd.getOptionValue("pprMax")) : null;
+            BigDecimal pricePerNightRangeMin = cmd.getOptionValue("ppnmin") != null ? new BigDecimal(cmd.getOptionValue("ppnmin")) : null;
+            BigDecimal pricePerNightRangeMax = cmd.getOptionValue("ppnmax") != null ? new BigDecimal(cmd.getOptionValue("ppnmax")) : null;
 
-            String amenities = cmd.getOptionValue("a");
-            // the listing types are separated by comma followed by a space
-            List<String> listingTypesList = listingType != null ? Arrays.asList(listingType.split(", ")) : null;
-            // The amenities are separated by comma followed by a space
-            List<String> amenitiesList = amenities != null ? Arrays.asList(amenities.split(", ")) : null;
-
+            String amenities = cmd.getOptionValue("amen");
+            // the listing types are separated by comma
+            List<String> listingTypesList = listingType != null ? Arrays.asList(listingType.split(",")) : null;
+            // The amenities are separated by comma
+            List<String> amenitiesList = amenities != null ? Arrays.asList(amenities.split(",")) : null;
 
             ListingFilter listingFilter = new ListingFilter.Builder()
                     .withListing(
@@ -950,6 +958,9 @@ public class ServiceCli {
             }
         } catch (ServiceException e) {
             System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
         } catch (org.apache.commons.cli.ParseException e) {
             System.out.println(e.getMessage());
             if (e.getCause() != null) {

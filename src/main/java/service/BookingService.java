@@ -472,6 +472,18 @@ public class BookingService {
         }
     }
 
+    public List<Review> getReviews() throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Review> reviews = dao.getReviews();
+            dao.commitTransaction();
+            return reviews;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve reviews."), e);
+        }
+    }
+
     public List<Review> getReviewsOfListing(Long listing_id) throws ServiceException {
         try {
             dao.startTransaction();

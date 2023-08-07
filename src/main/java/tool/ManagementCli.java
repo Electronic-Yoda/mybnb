@@ -3,6 +3,7 @@ package tool;
 import data.Dao;
 import data.DbConfig;
 import exception.ServiceException;
+import mylogger.ConsoleLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jline.reader.LineReader;
@@ -15,7 +16,6 @@ import service.BookingService;
 import service.ListingService;
 import service.Report;
 import service.UserService;
-
 import java.awt.*;
 
 
@@ -100,15 +100,7 @@ public class ManagementCli {
     private void handleLoadTestDataCommand() {
         System.out.println("Loading test data...");
         emulator.loadDataToDatabase();
-        try {
-            System.out.println("Number of users: " + userService.getUsers().size());
-            System.out.println("Number of listings: " + listingService.getListings().size());
-        } catch (ServiceException e) {
-            System.out.println(e.getMessage());
-            if (e.getCause() != null) {
-                System.out.println(e.getCause().getMessage());
-            }
-        }
+        emulator.showLoadedData();
     }
 
     private void handleResetCommand(String subCommand, String[] commandArgs) {
@@ -207,6 +199,7 @@ public class ManagementCli {
     }
 
     public static void main(String[] args) {
+        ConsoleLogger.setup();
         ManagementCli cli = new ManagementCli();
         cli.start();
     }

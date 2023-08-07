@@ -10,6 +10,7 @@ import filter.ListingFilter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.awt.geom.Point2D;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -519,7 +520,48 @@ public class ListingService {
         // ============= Search methods =============
     public List<Listing> searchListingsByFilter(ListingFilter filter) throws ServiceException {
         try {
-            dao.startTransaction();
+            dao.startTransaction();;
+            if ((filter.listing().address() != null || filter.listing().postal_code() != null)
+                    && filter.searchRadius() != null && filter.listing().location() == null) {
+                // get the coordinates of the address
+                // Note: only search by address or postal code, disregard everything else
+                // create new filter with only the address and postal code
+                ListingFilter tempFilter = new ListingFilter.Builder()
+                        .withListing(
+                                new Listing(
+                                        null,
+                                        null,
+                                        filter.listing().address(),
+                                        filter.listing().postal_code(),
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                )
+                        )
+                        .build();
+                List<Listing> listingsTemp = dao.getListingsByFilter(tempFilter);
+                if (listingsTemp.size() == 0) {
+                    dao.rollbackTransaction();
+                    return listingsTemp;
+                } else {
+                    Point2D addressCoordinates = listingsTemp.get(0).location();
+                    /* update filter with the coordinates. Create a new listing record, using all listing parameters from filter.listing() except
+                     for address, postal code, and add addressCoordinates */
+                    filter.updateListing(
+                            new Listing(
+                                    filter.listing().listing_id(),
+                                    filter.listing().listing_type(),
+                                    null, // set to null because we are using the coordinates to search. If we set the address, the search will be done using this exact address
+                                    null, // the same reason as above
+                                    addressCoordinates,
+                                    filter.listing().city(),
+                                    filter.listing().country(),
+                                    filter.listing().users_sin()
+                            )
+                    );
+                }
+            }
             List<Listing> listings = dao.getListingsByFilter(filter);
             dao.commitTransaction();
             return listings;

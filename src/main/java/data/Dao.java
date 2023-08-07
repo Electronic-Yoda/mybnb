@@ -240,7 +240,12 @@ public class Dao {
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             for (int i = 0; i < query.parameters().length; i++) {
-                stmt.setObject(i + 1, query.parameters()[i]);
+                if (query.parameters()[i] instanceof Point2D) {
+                    String pointWkt = String.format("POINT(%f %f)", ((Point2D) query.parameters()[i]).getX(), ((Point2D) query.parameters()[i]).getY());
+                    stmt.setString(i + 1, pointWkt);
+                } else {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
             }
             ResultSet rs = stmt.executeQuery();
             List<Listing> listings = new ArrayList<>();
@@ -400,7 +405,7 @@ public class Dao {
 
 
     public List<Listing> getListingsByFilter(ListingFilter filter) {
-        StringBuilder sql = new StringBuilder("SELECT listings.*, ST_AsText(location) as location_wkt FROM listings ");
+        StringBuilder sql = new StringBuilder("SELECT DISTINCT listings.*, ST_AsText(location) as location_wkt FROM listings ");
         List<Object> parameters = new ArrayList<>();
 
         // join with availabilities table if availability filter is not empty
@@ -433,9 +438,12 @@ public class Dao {
                             }
                             sql.append(")");
                         } else if (component.getName().equals("location") && filter.searchRadius() != null) {
-                            sql.append(" AND ST_Distance_Sphere(location, ST_MakePoint(?, ?)) <= ?");
-                            parameters.add(((Point2D) value).getX());
-                            parameters.add(((Point2D) value).getY());
+                            // sql.append(" AND ST_Distance_Sphere(location, ST_MakePoint(?, ?)) <= ?");
+                            // parameters.add(((Point2D) value).getX());
+                            // parameters.add(((Point2D) value).getY());
+                            // ST_MakePoint is not supported by this version of mysql. Use ST_GeomFromText instead
+                            sql.append(" AND ST_Distance_Sphere(location, ST_GeomFromText(?)) <= ?");
+                            parameters.add(value);
                             parameters.add(filter.searchRadius().multiply(BigDecimal.valueOf(100))); // convert km to m since ST_Distance_Sphere returns distance in m
                         } else {
                             sql.append(" AND " + component.getName() + " = ?");
@@ -452,28 +460,26 @@ public class Dao {
             for (RecordComponent component : filter.availability().getClass().getRecordComponents()) {
                 try {
                     Object value = component.getAccessor().invoke(filter.availability());
-                    if (value != null) {
-                        if (component.getName().equals("start_date") && filter.startDateRange() != null) {
-                            sql.append(" AND start_date >= ?");
-                            parameters.add(filter.startDateRange());
-                        } else if (component.getName().equals("end_date") && filter.endDateRange() != null) {
-                            sql.append(" AND end_date <= ?");
-                            parameters.add(filter.endDateRange());
-                        } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() != null && filter.maxPricePerNight() != null) {
-                            sql.append(" AND price_per_night >= ?");
-                            parameters.add(filter.minPricePerNight());
-                            sql.append(" AND price_per_night <= ?");
-                            parameters.add(filter.maxPricePerNight());
-                        } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() != null && filter.maxPricePerNight() == null) {
-                            sql.append(" AND price_per_night >= ?");
-                            parameters.add(filter.minPricePerNight());
-                        } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() == null && filter.maxPricePerNight() != null) {
-                            sql.append(" AND price_per_night <= ?");
-                            parameters.add(filter.maxPricePerNight());
-                        } else {
-                            sql.append(" AND " + component.getName() + " = ?");
-                            parameters.add(value);
-                        }
+                    if (component.getName().equals("start_date") && filter.startDateRange() != null) {
+                        sql.append(" AND start_date >= ?");
+                        parameters.add(filter.startDateRange());
+                    } else if (component.getName().equals("end_date") && filter.endDateRange() != null) {
+                        sql.append(" AND end_date <= ?");
+                        parameters.add(filter.endDateRange());
+                    } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() != null && filter.maxPricePerNight() != null) {
+                        sql.append(" AND price_per_night >= ?");
+                        parameters.add(filter.minPricePerNight());
+                        sql.append(" AND price_per_night <= ?");
+                        parameters.add(filter.maxPricePerNight());
+                    } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() != null && filter.maxPricePerNight() == null) {
+                        sql.append(" AND price_per_night >= ?");
+                        parameters.add(filter.minPricePerNight());
+                    } else if (component.getName().equals("price_per_night") && filter.minPricePerNight() == null && filter.maxPricePerNight() != null) {
+                        sql.append(" AND price_per_night <= ?");
+                        parameters.add(filter.maxPricePerNight());
+                    } else if (value != null) {
+                        sql.append(" AND " + component.getName() + " = ?");
+                        parameters.add(value);
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
