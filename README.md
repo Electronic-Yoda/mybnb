@@ -1,13 +1,14 @@
 # MY-BNB
 This repository contains a Java system that simulates the database and service layer of an online marketplace for homestays.
-The project has a strong emphasis on testability, graceful error handling, and data integrity during concurrent access or operational failures, which is maintained through the use of transactions.
+The system has a strong emphasis on testability, graceful error handling, and data integrity during concurrent access or operational failures, which is maintained through the use of transactions.
 
-The project is developed according to the DAO (Data Access Object) pattern, which allows for the separation of the business logic and the data access logic.
+The system is developed according to the DAO (Data Access Object) pattern, which allows for the separation of the business logic and the data access logic.
 Java Records are used to represent the data at the service layer, which allows for the immutability of the data and the ease of testing.
 A builder design pattern and the dynamic generation of SQL queries in the DAO layer allows for flexible and extensible queries.
 
 Key technologies and libraries used include Java, JUnit for testing, MySQL and JDBC for database operations, Docker for containerization,
-Log4J for logging, the MySQL spatial extensions for handling geographical data, and Swing for the report UI.
+Log4J for logging, MySQL spatial extensions for handling geographical data, Apache Commons CLI and JLine for the command line interface,
+and Swing for the report UI.
 Additionally, to generate emulated data for testing, the Google Maps API is used to retrieve the coordinates of addresses, and the Faker library is used to generate realistic data.
 
 Two applications are included to demonstrate the functionality of the system.
@@ -357,8 +358,8 @@ Stop all running reports.
 Quit console.
 
 
-# Running mysql using docker.
-Below is an example. Note the current program has not been tested for any mysql version other than version 8.0.
+# Running MySQL using docker.
+Below is an example. Note the current program has not been tested for any MySQL version other than version 8.0.
 
 ### Pull image:
 ```
@@ -367,15 +368,15 @@ docker pull mysql:8.0
 
 ### Run with no password setup:
 ```
-docker run --name mysql-bnb -d -p 3306:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=mydb -v mysql-bnb:/var/lib/mysql mysql:8.0
+docker run --name mysql-bnb -d -p 3307:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=mydb -v mysql-bnb:/var/lib/mysql mysql:8.0
 ```
-Note: The port can be changed to any port on the host machine.
+Note: The port can be changed to any port on the host machine. We used port 3307 on the host for our tests and demos
 
 ### Run with root password setup:
 ```
-docker run --name mysql-bnb -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=change-me -e MYSQL_DATABASE=mydb -v mysql-bnb:/var/lib/mysql mysql:8.0
+docker run --name mysql-bnb -d -p 3307:3306 -e MYSQL_ROOT_PASSWORD=change-me -e MYSQL_DATABASE=mydb -v mysql-bnb:/var/lib/mysql mysql:8.0
 ```
-Note: The port can be changed to any port on the host machine.
+Note: The port can be changed to any port on the host machine. We used port 3307 on the host for our tests and demos
 
 ### Open mysql shell inside the container:
 ```
@@ -393,7 +394,37 @@ docker rm mysql-bnb
 docker volume rm mysql-bnb
 ```
 
-# ServiceCli Demo
+# Program Demo
+First, start ManagementCli and load test data. Make sure the database is empty before loading test data.
+```
+reset database
+```
+
+Then, load test data.
+
+```
+load testData
+````
+
+Then, start ServiceCli and login as any user with SIN between 3 to 21, inclusive.
+Below are some example commands to run.
+### Creating users and listings
+```agsl
+create user -s 1 -n Donald Doe -a 32_Main_St._Toronto,_ON -b 2001-03-12 -o Student
+
+// let user with id 1 create two listings
+login user -s 1
+create listing -t house -a 123_Main_St. -pc M5S_1A1 -lo 43.66 -la 79.40 -ci Toronto -co Canada
+    // then add tv, hot tub, and wifi to the first listing
+create listing -t apartment -a 111_Main_St. -pc M5T_1C1 -lo 42.11 -la 79.40 -ci Toronto -co Canada
+    // then add wifi only
+    
+show mylistings
+
+// You can then add availabilities to the listings. You will need the listing id to do so.
+```
+
+### Search Listings
 Try to run the following commands in the order they are listed below. Note that the commands are case sensitive.
 ```agsl
 // Operations 3: login to user 6
