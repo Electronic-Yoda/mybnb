@@ -5,9 +5,9 @@ create user -s 1 -n Donald Doe -a 32_Main_St._Toronto,_ON -b 2001-03-12 -o Stude
 // let user with id 1 create two listings
 login user -s 1
 create listing -t house -a 123_Main_St. -pc M5S_1A1 -lo 43.66 -la 79.40 -ci Toronto -co Canada
-// then add tv, hot tub, and wifi to the first listing
+    // then add tv, hot tub, and wifi to the first listing
 create listing -t apartment -a 111_Main_St. -pc M5T_1C1 -lo 42.11 -la 79.40 -ci Toronto -co Canada
-// then add wifi only
+    // then add wifi only
 
 
 // TODO: update listing ID because it will be different
@@ -81,3 +81,11 @@ show listings -t hotel -amen tv,dryer
 show listings -ppnmax 100
 show listings -ppnmin 100 -ppnmax 110
 show listings -ppn <input your exact value>
+
+
+
+
+// Management operations
+load testData
+run reports
+set dateRange -sdr 2023-01-01 -edr 2025-01-01

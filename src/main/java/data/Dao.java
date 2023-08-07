@@ -12,7 +12,9 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -282,8 +284,9 @@ public class Dao {
     }
 
     public boolean listingExists(Listing listing) {
-        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE postal_code = ? AND city = ? AND country = ?",
-                listing.postal_code(), listing.city(), listing.country());
+        SqlQuery query = new SqlQuery("SELECT *, ST_AsText(location) as location_wkt FROM listings WHERE postal_code = ? " +
+                "AND city = ? AND country = ? AND address = ?",
+                listing.postal_code(), listing.city(), listing.country(), listing.address());
         try {
             return !executeListingQuery(query).isEmpty();
         } catch (SQLException e) {
@@ -1163,4 +1166,58 @@ public class Dao {
             throw new DataAccessException("Error updating rating of host", e);
         }
     }
+
+    public Map<String, Long> getNumberOfBookingsInDateRangePerCity(LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery("SELECT city, COUNT(*) FROM bookings " +
+                "JOIN listings ON bookings.listings_listing_id = listings.listing_id " +
+                "WHERE start_date >= ? AND end_date <= ? " +
+                "GROUP BY city", startDate, endDate);
+        try {
+            Connection conn = threadLocalConnection.get();
+            PreparedStatement stmt = conn.prepareStatement(query.sql());
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            Map<String, Long> bookingsByCity = new HashMap<>();
+            while (rs.next()) {
+                bookingsByCity.put(rs.getString("city"), rs.getLong("COUNT(*)"));
+            }
+            return bookingsByCity;
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting number of bookings by date range and city", e);
+        }
+    }
+
+    public Map<String, Map<String, Long>> getNumberOfBookingsInDateRangePerPostalCodePerCity (LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery("SELECT city, postal_code, COUNT(*) FROM bookings " +
+                "JOIN listings ON bookings.listings_listing_id = listings.listing_id " +
+                "WHERE start_date >= ? AND end_date <= ? " +
+                "GROUP BY city, postal_code", startDate, endDate);
+        try {
+            Connection conn = threadLocalConnection.get();
+            PreparedStatement stmt = conn.prepareStatement(query.sql());
+            for (int i = 0; i < query.parameters().length; i++) {
+                stmt.setObject(i + 1, query.parameters()[i]);
+            }
+            ResultSet rs = stmt.executeQuery();
+            Map<String, Map<String, Long>> bookingsByCityAndPostalCode = new HashMap<>();
+            while (rs.next()) {
+                String city = rs.getString("city");
+                String postalCode = rs.getString("postal_code");
+                Long count = rs.getLong("COUNT(*)");
+                if (bookingsByCityAndPostalCode.containsKey(city)) {
+                    bookingsByCityAndPostalCode.get(city).put(postalCode, count);
+                } else {
+                    HashMap<String, Long> postalCodeCount = new HashMap<>();
+                    postalCodeCount.put(postalCode, count);
+                    bookingsByCityAndPostalCode.put(city, postalCodeCount);
+                }
+            }
+            return bookingsByCityAndPostalCode;
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting number of bookings by date range and city", e);
+        }
+    }
+
 }
