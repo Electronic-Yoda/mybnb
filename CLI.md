@@ -163,15 +163,22 @@ A prompt will appear asking the user to create a review.r
 show mylistings
 
 **Description:** \
+Show all listings that the user is the host of.
+
+**Requirements:**
+* User must be logged in.
+
+## Show Listings by filtering search
+**Description:** \
 Show all listings available based on filter options.
 
 All optional options are show below. When no options are specified, all listings will be shown.
 ```agsl
 usage: show listings
  -a,--address <arg>                          listing address
- -amen,--amenities <arg>                     amenities (input a list of
-                                             amenities, separated by comma
-                                             followed by a space
+ -amen,--amenities <arg>                     amenities (A list of
+                                             amenities, each separated by
+                                             comma
  -ci,--city <arg>                            listing city
  -co,--country <arg>                         listing country
  -ed,--end-date <arg>                        availability end date
@@ -180,21 +187,18 @@ usage: show listings
  -l,--listing-id <arg>                       listing id
  -la,--latitude <arg>                        listing latitude
  -lo,--longitude <arg>                       listing longitude
- -pc,--postal_code <arg>                     listing postal code
- -ppn,--price-per-night <arg>                availability price per night
- -pprMax,--price-per-night-range-max <arg>   availability price per night
-                                             range max
- -pprMin,--price-per-night-range-min <arg>   availability price per night
-                                             range min
+ -pc,--postal-code <arg>                     listing postal code
+ -ppn,--price-per-night <arg>                price per night
+ -ppnmax,--price-per-night-range-max <arg>   price per night range max
+ -ppnmin,--price-per-night-range-min <arg>   price per night range min
  -rad,--search-radius <arg>                  Search radius. Defaults to 20
                                              if address is not specified
                                              and is not set
  -s,--user-sin <arg>                         user sin
  -sd,--start-date <arg>                      availability start date
  -sdr,--start-date-range <arg>               availability start date range
- -t,--listing types <arg>                    listing types, separated by
-                                             comma with a space
-<user 6> 
+ -t,--listing-types <arg>                    a list of listing types, each
+                                             separated by a comma
 ```
 
 **Requirements:**

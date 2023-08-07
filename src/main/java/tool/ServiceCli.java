@@ -962,7 +962,7 @@ public class ServiceCli {
             // Listings filter options
             options.addOption(Option.builder("l").longOpt("listing-id").hasArg().desc("listing id").build());
             options.addOption(Option.builder("t").longOpt("listing-types").hasArg()
-                            .desc("listing types, separated by comma").build());
+                            .desc("a list of listing types, each separated by a comma").build());
             options.addOption(Option.builder("a").longOpt("address").hasArg()
                     .desc("listing address").build());
             options.addOption(Option.builder("pc").longOpt("postal-code").hasArg()
@@ -991,15 +991,15 @@ public class ServiceCli {
             options.addOption(Option.builder("edr").longOpt("end-date-range").hasArg()
                     .desc("availability end date range").build());
             options.addOption(Option.builder("ppn").longOpt("price-per-night").hasArg()
-                    .desc("availability price per night").build());
+                    .desc("price per night").build());
             options.addOption(Option.builder("ppnmin").longOpt("price-per-night-range-min").hasArg()
-                    .desc("availability price per night range min").build());
+                    .desc("price per night range min").build());
             options.addOption(Option.builder("ppnmax").longOpt("price-per-night-range-max").hasArg()
-                    .desc("availability price per night range max").build());
+                    .desc("price per night range max").build());
 
             // Amenities filter options
             options.addOption(Option.builder("amen").longOpt("amenities").hasArg()
-                    .desc("amenities (input a list of amenities, separated by comma").build());
+                    .desc("amenities (A list of amenities, each separated by comma").build());
 
             // add help
             options.addOption(Option.builder("h").longOpt("help").desc("show help").build());
