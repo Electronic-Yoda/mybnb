@@ -1,5 +1,20 @@
-# ServiceCLI Commands
+# MY-BNB
+This repository contains a Java system that simulates the database and service layer of an online marketplace for homestays.
+The project has a strong emphasis on testability, graceful error handling, and data integrity during concurrent access or operational failures, which is maintained through the use of transactions.
 
+The project is developed according to the DAO (Data Access Object) pattern, which allows for the separation of the business logic and the data access logic.
+Java Records are used to represent the data at the service layer, which allows for the immutability of the data and the ease of testing.
+A builder design pattern and the dynamic generation of SQL queries in the DAO layer allows for flexible and extensible queries.
+
+Key technologies and libraries used include Java, JUnit for testing, MySQL and JDBC for database operations, Docker for containerization,
+Log4J for logging, the MySQL spatial extensions for handling geographical data, and Swing for the report UI.
+Additionally, to generate emulated data for testing, the Google Maps API is used to retrieve the coordinates of addresses, and the Faker library is used to generate realistic data.
+
+Two applications are included to demonstrate the functionality of the system.
+The first is a ServiceCli, which allows users to create user accounts, listings, make bookings, and add reviews. A notable capability of this application is its ability to search for listings based on various filters, such as price, location, and amenities.
+The second application is ManagementCli, which allows administrators to load test data, reset the database, and run reports. It also allows administrators to view reports on the system, such as the most popular listings and the most active users.
+
+# ServiceCli Commands
 ## Login
 
 `login user -s <sin number>`
