@@ -135,6 +135,30 @@ Cancel booking as tenant or host.
 * User must be either host or tenant.
 * A booking with *booking id* must exist.
 
+## Add Review
+add review -b \<booking id\>
+
+**Description:** \
+Add review to a related booking.
+A prompt will appear asking the user to create a review.r
+
+**Requirements:**
+* User must be logged in.
+* User must be either host or tenant.
+* A booking with *booking id* must exist.
+
+## Delete Review
+delete review -b \<booking id\>
+
+**Description:** \
+Add review to a related booking.
+A prompt will appear asking the user to create a review.r
+
+**Requirements:**
+* User must be logged in.
+* User must be either host or tenant.
+* A booking with *booking id* must exist.
+
 ## Show User's Listings
 show mylistings
 
@@ -205,6 +229,15 @@ Show all amenities for listing.
 **Requirements:**
 * User must be logged in.
 * A listing with *listing id* must exist.
+
+## Show User's Reviews
+show myreviews
+
+**Description:** \
+Show all reviews as host and as tenant.
+
+**Requirements:**
+* User must be loged in
 
 ## Show Listings based on filter
 

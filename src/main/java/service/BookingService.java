@@ -137,13 +137,14 @@ public class BookingService {
         try {
             dao.startTransaction();
             if (!dao.tenantSinMatchesBookingId(tenant_sin, booking_id)) {
-                throw new ServiceException(String.format("Unable to cancel booking because tenant sin does not match. "));
+                dao.commitTransaction();
+                return false;
             }
             dao.commitTransaction();
             return true;
         } catch (Exception e) {
             dao.rollbackTransaction();
-            throw new ServiceException(String.format("Unable to cancel booking."), e);
+            throw new ServiceException(String.format("Unable to determine if user is tenant of booking."), e);
         }
     }
 
@@ -151,13 +152,14 @@ public class BookingService {
         try {
             dao.startTransaction();
             if (!dao.hostSinMatchesBookingId(host_sin, booking_id)) {
-                throw new ServiceException(String.format("Unable to cancel booking because host sin does not match. "));
+                dao.commitTransaction();
+                return false;
             }
             dao.commitTransaction();
             return true;
         } catch (Exception e) {
             dao.rollbackTransaction();
-            throw new ServiceException(String.format("Unable to cancel booking."), e);
+            throw new ServiceException(String.format("Unable to determine if user is host of booking."), e);
         }
     }
 
@@ -511,10 +513,33 @@ public class BookingService {
         }
     }
 
+    public List<Review> getReviewsAsTenant(Long tenantId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Review> reviews = dao.getReviewsAsTenant(tenantId);
+            dao.commitTransaction();
+            return reviews;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve reviews."), e);
+        }
+    }
+
+    public List<Review> getReviewsAsHost(Long hostId) throws ServiceException {
+        try {
+            dao.startTransaction();
+            List<Review> reviews = dao.getReviewsAsHost(hostId);
+            dao.commitTransaction();
+            return reviews;
+        } catch (Exception e) {
+            dao.rollbackTransaction();
+            throw new ServiceException(String.format("Unable to retrieve reviews."), e);
+        }
+    }
+
     public Date getCurrDate() throws ServiceException {
         try {
             dao.startTransaction();
-            System.out.println(dao.getCurrentDate());
             Date currDate = dao.getCurrentDate();
             dao.commitTransaction();
             return currDate;
