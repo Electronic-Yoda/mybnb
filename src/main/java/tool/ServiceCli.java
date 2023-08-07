@@ -860,7 +860,7 @@ public class ServiceCli {
             return;
 
         try {
-            System.out.println("My Reviews (as a Tenant):");
+            System.out.println("Peoples' review of me (as a Tenant):");
             List<Review> reviews = bookingService.getReviewsAsTenant(Long.parseLong(logged_in_user_sin));
 
             for (Review review : reviews) {
@@ -869,7 +869,7 @@ public class ServiceCli {
                 System.out.println(reviewString);
             }
 
-            System.out.println("My Reviews (as a Host):");
+            System.out.println("\nPeoples' review of me (as a Host):");
             reviews = bookingService.getReviewsAsHost(Long.parseLong(logged_in_user_sin));
 
             for (Review review : reviews) {
@@ -877,6 +877,26 @@ public class ServiceCli {
                         review.review_id(), review.rating_of_host(), review.rating_of_listing(), review.comment_from_tenant(), review.bookings_booking_id());
                 System.out.println(reviewString);
             }
+
+            System.out.println("\nMy reviews as a Tenant:");
+            reviews = bookingService.getReviewsAsTenant(Long.parseLong(logged_in_user_sin));
+
+            for (Review review : reviews) {
+                String reviewString = String.format("Review id: %s, Host Rating: %s, Listing Rating: %s, Comment: %s, Booking id: %s",
+                        review.review_id(), review.rating_of_host(), review.rating_of_listing(), review.comment_from_tenant(), review.bookings_booking_id());
+                System.out.println(reviewString);
+            }
+
+            System.out.println("\nMy reviews as a Host:");
+            reviews = bookingService.getReviewsAsHost(Long.parseLong(logged_in_user_sin));
+
+            for (Review review : reviews) {
+                String reviewString = String.format("Review id: %s, Rating: %s, Comment: %s, Booking id: %s",
+                        review.review_id(), review.rating_of_tenant(), review.comment_from_host(), review.bookings_booking_id());
+                System.out.println(reviewString);
+            }
+
+
         } catch (ServiceException e) {
             System.out.println(e.getMessage());
 
