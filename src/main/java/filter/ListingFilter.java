@@ -20,10 +20,13 @@ public class ListingFilter {
     private BigDecimal maxPricePerNight; // setting this overrides the price per night in the availability object
     private LocalDate startDateRange; // setting this overrides the start date in the availability object
     private LocalDate endDateRange; // setting this overrides the end date in the availability object
+    private boolean groupByPriceAscend = false;
+    private boolean groupByPriceDescend = false;
 
     public ListingFilter(Listing listing, Availability availability, List<String> amenities,
                          List<String> listingTypes, BigDecimal searchRadius, BigDecimal minPricePerNight,
-                         BigDecimal maxPricePerNight, LocalDate startDateRange, LocalDate endDateRange) {
+                         BigDecimal maxPricePerNight, LocalDate startDateRange, LocalDate endDateRange,
+                         boolean groupByPriceAscend, boolean groupByPriceDescend) {
         this.listing = listing;
         this.availability = availability;
         this.amenities = amenities;
@@ -33,6 +36,8 @@ public class ListingFilter {
         this.maxPricePerNight = maxPricePerNight;
         this.startDateRange = startDateRange;
         this.endDateRange = endDateRange;
+        this.groupByPriceAscend = groupByPriceAscend;
+        this.groupByPriceDescend = groupByPriceDescend;
     }
 
     public Listing listing() {
@@ -71,6 +76,14 @@ public class ListingFilter {
         return endDateRange;
     }
 
+    public boolean groupByPriceAscend() {
+        return groupByPriceAscend;
+    }
+
+    public boolean groupByPriceDescend() {
+        return groupByPriceDescend;
+    }
+
     public void updateListing(Listing listing) {
         this.listing = listing;
     }
@@ -88,6 +101,10 @@ public class ListingFilter {
         private BigDecimal maxPricePerNight;
         private LocalDate startDateRange;
         private LocalDate endDateRange;
+
+        private boolean groupByPriceAscend = false;
+
+        private boolean groupByPriceDescend = false;
 
         public Builder withListing(Listing listing) {
             this.listing = listing;
@@ -138,9 +155,20 @@ public class ListingFilter {
             return this;
         }
 
+        public Builder withGroupByPriceAscend(boolean groupByPriceAscend) {
+            this.groupByPriceAscend = groupByPriceAscend;
+            return this;
+        }
+
+        public Builder withGroupByPriceDescend(boolean groupByPriceDescend) {
+            this.groupByPriceDescend = groupByPriceDescend;
+            return this;
+        }
+
         public ListingFilter build() {
             return new ListingFilter(listing, availability, amenities, listingTypes, searchRadius,
-                    minPricePerNight, maxPricePerNight, startDateRange, endDateRange);
+                    minPricePerNight, maxPricePerNight, startDateRange, endDateRange,
+                    groupByPriceAscend, groupByPriceDescend);
         }
     }
 }

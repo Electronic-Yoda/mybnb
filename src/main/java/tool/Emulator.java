@@ -308,11 +308,11 @@ public class Emulator {
             String listingsJson = gson.toJson(listings);
 
             // Write JSON array to file
-            logger.info("Number of users: " + users.size());
+            logger.info("Number of users generated: " + users.size());
             try (FileWriter file = new FileWriter(userFilePath)) {
                 file.write(usersJson);
             }
-            logger.info("Number of listings: " + listings.size());
+            logger.info("Number of listings generated: " + listings.size());
             try (FileWriter file = new FileWriter(listingFilePath)) {
                 file.write(listingsJson);
             }
