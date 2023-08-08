@@ -25,6 +25,10 @@ The second application is ManagementCli, which allows administrators to load tes
 * Reviews can only be created after the end date of the booking.
 * Users cannot book listings with availabilities that ended before the current date.
 
+# System Limitations
+* Suggested revenue increase for each amenity added is based on research data rather than in-system calculations
+* More help commands can be added to the UI
+  
 # ServiceCli Commands
 ## Login
 
