@@ -12,18 +12,18 @@ create listing -t apartment -a 111_Main_St. -pc M5T_1C1 -lo 42.11 -la 79.40 -ci 
 
 // TODO: update listing ID because it will be different
 show mylistings
-show amenities -l 53
-show amenities -l 54
+show amenities -l 58
+show amenities -l 59
 
-add availability -l 53 -sd 2023-09-10 -ed 2023-09-20 -ppn 100
-add availability -l 53 -sd 2023-10-10 -ed 2023-10-20 -ppn unsure
+add availability -l 58 -sd 2023-09-10 -ed 2023-09-20 -ppn 100
+add availability -l 58 -sd 2023-10-10 -ed 2023-10-20 -ppn unsure
 
-add availability -l 54 -sd 2023-09-10 -ed 2023-09-20 -ppn unsure
+add availability -l 59 -sd 2023-09-10 -ed 2023-09-20 -ppn unsure
 
-show availabilities -l 53
-show availabilities -l 54
+show availabilities -l 58
+show availabilities -l 59
 
-delete listing -l 54
+delete listing -l 59
 
 show mylistings
 
@@ -31,10 +31,10 @@ show mylistings
 // Operations 2: create user 2 as tenant
 create user -s 2 -n John_Doe -a  -b 1976-01-09 -o Doctor
 
-show amenities -l 53
-show availabilities -l 53
+show amenities -l 58
+show availabilities -l 58
 
-create booking -l 53 -sd 2023-09-10 -ed 2023-09-19 -pm visa -cn 3115135341
+create booking -l 58 -sd 2023-09-10 -ed 2023-09-19 -pm visa -cn 3115135341
 
 show mybookings
 
