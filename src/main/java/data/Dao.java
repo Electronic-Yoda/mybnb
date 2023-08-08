@@ -10,11 +10,9 @@ import java.awt.geom.Point2D;
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
 import java.sql.*;
+import java.sql.Date;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -172,13 +170,14 @@ public class Dao {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
-            ResultSet rs = stmt.executeQuery();
-            List<User> users = new ArrayList<>();
-            while (rs.next()) {
-                users.add(new User(rs.getLong("sin"), rs.getString("name"), rs.getString("address"),
-                        rs.getDate("birthdate").toLocalDate(), rs.getString("occupation")));
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<User> users = new ArrayList<>();
+                while (rs.next()) {
+                    users.add(new User(rs.getLong("sin"), rs.getString("name"), rs.getString("address"),
+                            rs.getDate("birthdate").toLocalDate(), rs.getString("occupation")));
+                }
+                return users;
             }
-            return users;
         }
     }
 
@@ -249,23 +248,24 @@ public class Dao {
                     stmt.setObject(i + 1, query.parameters()[i]);
                 }
             }
-            ResultSet rs = stmt.executeQuery();
-            List<Listing> listings = new ArrayList<>();
-            while (rs.next()) {
-                String wkt = rs.getString("location_wkt");
-                Matcher matcher = Pattern.compile("POINT\\s*\\(\\s*(-?\\d+\\.?\\d*)\\s+(-?\\d+\\.?\\d*)\\s*\\)").matcher(wkt);
-                Point2D location = null;
-                if (matcher.find()) {
-                    double longitude = Double.parseDouble(matcher.group(1));
-                    double latitude = Double.parseDouble(matcher.group(2));
-                    location = new Point2D.Double(longitude, latitude);
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<Listing> listings = new ArrayList<>();
+                while (rs.next()) {
+                    String wkt = rs.getString("location_wkt");
+                    Matcher matcher = Pattern.compile("POINT\\s*\\(\\s*(-?\\d+\\.?\\d*)\\s+(-?\\d+\\.?\\d*)\\s*\\)").matcher(wkt);
+                    Point2D location = null;
+                    if (matcher.find()) {
+                        double longitude = Double.parseDouble(matcher.group(1));
+                        double latitude = Double.parseDouble(matcher.group(2));
+                        location = new Point2D.Double(longitude, latitude);
+                    }
+                    listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"),
+                            rs.getString("address"), rs.getString("postal_code"),
+                            location, rs.getString("city"), rs.getString("country"),
+                            rs.getLong("users_sin")));
                 }
-                listings.add(new Listing(rs.getLong("listing_id"), rs.getString("listing_type"),
-                        rs.getString("address"), rs.getString("postal_code"),
-                        location, rs.getString("city"), rs.getString("country"),
-                        rs.getLong("users_sin")));
+                return listings;
             }
-            return listings;
         }
     }
 
@@ -341,11 +341,12 @@ public class Dao {
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             stmt.setObject(1, listing_id);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getFloat("price_per_night");
-            } else {
-                return null;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getFloat("price_per_night");
+                } else {
+                    return null;
+                }
             }
         } catch (SQLException e) {
             throw new DataAccessException("Error getting listing price per night", e);
@@ -357,11 +358,12 @@ public class Dao {
         Connection conn = threadLocalConnection.get();
         try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
             stmt.setObject(1, city);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getFloat("AVG(price_per_night)");
-            } else {
-                return null;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getFloat("AVG(price_per_night)");
+                } else {
+                    return null;
+                }
             }
         } catch (SQLException e) {
             System.out.println(e);
@@ -540,13 +542,14 @@ public class Dao {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
-            ResultSet rs = stmt.executeQuery();
-            List<Amenity> amenities = new ArrayList<>();
-            while (rs.next()) {
-                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name"),
-                        rs.getBigDecimal("impact_on_revenue")));
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<Amenity> amenities = new ArrayList<>();
+                while (rs.next()) {
+                    amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name"),
+                            rs.getBigDecimal("impact_on_revenue")));
+                }
+                return amenities;
             }
-            return amenities;
         }
     }
 
@@ -610,16 +613,17 @@ public class Dao {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
-            ResultSet rs = stmt.executeQuery();
-            List<Booking> bookings = new ArrayList<>();
-            while (rs.next()) {
-                bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(),
-                        rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
-                        rs.getBigDecimal("amount"), rs.getString("payment_method"),
-                        rs.getLong("card_number"), rs.getLong("tenant_sin"),
-                        rs.getLong("listings_listing_id")));
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<Booking> bookings = new ArrayList<>();
+                while (rs.next()) {
+                    bookings.add(new Booking(rs.getLong("booking_id"), rs.getDate("start_date").toLocalDate(),
+                            rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
+                            rs.getBigDecimal("amount"), rs.getString("payment_method"),
+                            rs.getLong("card_number"), rs.getLong("tenant_sin"),
+                            rs.getLong("listings_listing_id")));
+                }
+                return bookings;
             }
-            return bookings;
         }
     }
 
@@ -655,16 +659,17 @@ public class Dao {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
-            ResultSet rs = stmt.executeQuery();
-            List<CancelledBooking> cancelledBookings = new ArrayList<>();
-            while (rs.next()) {
-                cancelledBookings.add(new CancelledBooking(rs.getLong("cancelled_booking_id"), rs.getDate("start_date").toLocalDate(),
-                        rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
-                        rs.getBigDecimal("amount"), rs.getString("payment_method"),
-                        rs.getLong("card_number"), rs.getLong("tenant_sin"),
-                        rs.getLong("listings_listing_id")));
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<CancelledBooking> cancelledBookings = new ArrayList<>();
+                while (rs.next()) {
+                    cancelledBookings.add(new CancelledBooking(rs.getLong("cancelled_booking_id"), rs.getDate("start_date").toLocalDate(),
+                            rs.getDate("end_date").toLocalDate(), rs.getDate("transaction_date").toLocalDate(),
+                            rs.getBigDecimal("amount"), rs.getString("payment_method"),
+                            rs.getLong("card_number"), rs.getLong("tenant_sin"),
+                            rs.getLong("listings_listing_id")));
+                }
+                return cancelledBookings;
             }
-            return cancelledBookings;
         }
     }
 
@@ -720,14 +725,15 @@ public class Dao {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
-            ResultSet rs = stmt.executeQuery();
-            List<Availability> availabilities = new ArrayList<>();
-            while (rs.next()) {
-                availabilities.add(new Availability(rs.getLong("availability_id"),
-                        rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(),
-                        rs.getBigDecimal("price_per_night"), rs.getLong("listings_listing_id")));
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<Availability> availabilities = new ArrayList<>();
+                while (rs.next()) {
+                    availabilities.add(new Availability(rs.getLong("availability_id"),
+                            rs.getDate("start_date").toLocalDate(), rs.getDate("end_date").toLocalDate(),
+                            rs.getBigDecimal("price_per_night"), rs.getLong("listings_listing_id")));
+                }
+                return availabilities;
             }
-            return availabilities;
         }
     }
 
@@ -875,13 +881,14 @@ public class Dao {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
-            ResultSet rs = stmt.executeQuery();
-            List<Amenity> amenities = new ArrayList<>();
-            while (rs.next()) {
-                amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name"),
-                        rs.getBigDecimal("impact_on_revenue")));
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<Amenity> amenities = new ArrayList<>();
+                while (rs.next()) {
+                    amenities.add(new Amenity(rs.getLong("amenity_id"), rs.getString("amenity_name"),
+                            rs.getBigDecimal("impact_on_revenue")));
+                }
+                return amenities;
             }
-            return amenities;
         }
     }
 
@@ -1046,28 +1053,29 @@ public class Dao {
             for (int i = 0; i < query.parameters().length; i++) {
                 stmt.setObject(i + 1, query.parameters()[i]);
             }
-            ResultSet rs = stmt.executeQuery();
-            List<Review> reviews = new ArrayList<>();
-            while (rs.next()) {
-                // the follow handle the case where JDBC's getInt returns 0 for null
-                Integer ratingOfListing = rs.getInt("rating_of_listing");
-                if (rs.wasNull()) {
-                    ratingOfListing = null;
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<Review> reviews = new ArrayList<>();
+                while (rs.next()) {
+                    // the follow handle the case where JDBC's getInt returns 0 for null
+                    Integer ratingOfListing = rs.getInt("rating_of_listing");
+                    if (rs.wasNull()) {
+                        ratingOfListing = null;
+                    }
+                    Integer ratingOfHost = rs.getInt("rating_of_host");
+                    if (rs.wasNull()) {
+                        ratingOfHost = null;
+                    }
+                    Integer ratingOfRenter = rs.getInt("rating_of_tenant");
+                    if (rs.wasNull()) {
+                        ratingOfRenter = null;
+                    }
+                    reviews.add(new Review(rs.getLong("review_id"), ratingOfListing, ratingOfHost,
+                            ratingOfRenter, rs.getString("comment_from_tenant"),
+                            rs.getString("comment_from_host"), rs.getLong("bookings_booking_id")));
                 }
-                Integer ratingOfHost = rs.getInt("rating_of_host");
-                if (rs.wasNull()) {
-                    ratingOfHost = null;
-                }
-                Integer ratingOfRenter = rs.getInt("rating_of_tenant");
-                if (rs.wasNull()) {
-                    ratingOfRenter = null;
-                }
-                reviews.add(new Review(rs.getLong("review_id"), ratingOfListing, ratingOfHost,
-                        ratingOfRenter, rs.getString("comment_from_tenant"),
-                        rs.getString("comment_from_host"), rs.getLong("bookings_booking_id")));
-            }
 
-            return reviews;
+                return reviews;
+            }
         }
     }
 
@@ -1174,16 +1182,18 @@ public class Dao {
                 "GROUP BY city", startDate, endDate);
         try {
             Connection conn = threadLocalConnection.get();
-            PreparedStatement stmt = conn.prepareStatement(query.sql());
-            for (int i = 0; i < query.parameters().length; i++) {
-                stmt.setObject(i + 1, query.parameters()[i]);
+            try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                for (int i = 0; i < query.parameters().length; i++) {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
+                try (ResultSet rs = stmt.executeQuery()) {
+                    Map<String, Long> bookingsByCity = new HashMap<>();
+                    while (rs.next()) {
+                        bookingsByCity.put(rs.getString("city"), rs.getLong("COUNT(*)"));
+                    }
+                    return bookingsByCity;
+                }
             }
-            ResultSet rs = stmt.executeQuery();
-            Map<String, Long> bookingsByCity = new HashMap<>();
-            while (rs.next()) {
-                bookingsByCity.put(rs.getString("city"), rs.getLong("COUNT(*)"));
-            }
-            return bookingsByCity;
         } catch (SQLException e) {
             throw new DataAccessException("Error getting number of bookings by date range and city", e);
         }
@@ -1196,27 +1206,160 @@ public class Dao {
                 "GROUP BY city, postal_code", startDate, endDate);
         try {
             Connection conn = threadLocalConnection.get();
-            PreparedStatement stmt = conn.prepareStatement(query.sql());
-            for (int i = 0; i < query.parameters().length; i++) {
-                stmt.setObject(i + 1, query.parameters()[i]);
-            }
-            ResultSet rs = stmt.executeQuery();
-            Map<String, Map<String, Long>> bookingsByCityAndPostalCode = new HashMap<>();
-            while (rs.next()) {
-                String city = rs.getString("city");
-                String postalCode = rs.getString("postal_code");
-                Long count = rs.getLong("COUNT(*)");
-                if (bookingsByCityAndPostalCode.containsKey(city)) {
-                    bookingsByCityAndPostalCode.get(city).put(postalCode, count);
-                } else {
-                    HashMap<String, Long> postalCodeCount = new HashMap<>();
-                    postalCodeCount.put(postalCode, count);
-                    bookingsByCityAndPostalCode.put(city, postalCodeCount);
+            try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                for (int i = 0; i < query.parameters().length; i++) {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
+                try (ResultSet rs = stmt.executeQuery()) {
+                    Map<String, Map<String, Long>> bookingsByCityAndPostalCode = new HashMap<>();
+                    while (rs.next()) {
+                        String city = rs.getString("city");
+                        String postalCode = rs.getString("postal_code");
+                        Long count = rs.getLong("COUNT(*)");
+                        if (bookingsByCityAndPostalCode.containsKey(city)) {
+                            bookingsByCityAndPostalCode.get(city).put(postalCode, count);
+                        } else {
+                            HashMap<String, Long> postalCodeCount = new HashMap<>();
+                            postalCodeCount.put(postalCode, count);
+                            bookingsByCityAndPostalCode.put(city, postalCodeCount);
+                        }
+                    }
+                    return bookingsByCityAndPostalCode;
                 }
             }
-            return bookingsByCityAndPostalCode;
         } catch (SQLException e) {
             throw new DataAccessException("Error getting number of bookings by date range and city", e);
+        }
+    }
+
+
+    public Map<User, Long> getNumberOfBookingsInDateRangePerRenter(LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery("SELECT users.*, COUNT(*) FROM bookings " +
+                "JOIN users ON bookings.tenant_sin = users.sin " +
+                "WHERE start_date >= ? AND end_date <= ? " +
+                "GROUP BY bookings.tenant_sin " +
+                "ORDER by COUNT(*) DESC",
+                startDate, endDate);
+        try {
+            List<User> users = executeUserQuery(query);
+            Connection conn = threadLocalConnection.get();
+            try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                for (int i = 0; i < query.parameters().length; i++) {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
+                try (ResultSet rs = stmt.executeQuery()) {
+                    // Use ordered map to preserve order of results
+                    Map<User, Long> bookingsByRenter = new LinkedHashMap<>();
+                    int counter = 0;
+                    while (rs.next() && counter < users.size()) {
+                        bookingsByRenter.put(users.get(counter++), rs.getLong("COUNT(*)"));
+                    }
+                    return bookingsByRenter;
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting number of bookings by date range and renter", e);
+        }
+    }
+
+    // Map<City, Map<Renter, Count>>
+    public Map<String, Map<User, Long>> getNumberOfBookingsInDateRangePerRenterPerCity(LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery("SELECT city, users.*, COUNT(*) FROM bookings " +
+                "JOIN listings ON bookings.listings_listing_id = listings.listing_id " +
+                "JOIN users ON bookings.tenant_sin = users.sin " +
+                "WHERE start_date >= ? AND end_date <= ? " +
+                "GROUP BY city, bookings.tenant_sin " +
+                "ORDER by COUNT(*) DESC",
+                startDate, endDate);
+        try {
+            List<User> users = executeUserQuery(query);
+            Connection conn = threadLocalConnection.get();
+
+            try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                for (int i = 0; i < query.parameters().length; i++) {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
+                try (ResultSet rs = stmt.executeQuery()) {
+                    // Use ordered map to preserve order of results
+                    Map<String, Map<User, Long>> bookingsByRenterByCity = new LinkedHashMap<>();
+                    int counter = 0;
+                    while (rs.next() && counter < users.size()) {
+                        String city = rs.getString("city");
+                        User renter = users.get(counter++);
+                        Long count = rs.getLong("COUNT(*)");
+                        if (bookingsByRenterByCity.containsKey(city)) {
+                            bookingsByRenterByCity.get(city).put(renter, count);
+                        } else {
+                            HashMap<User, Long> renterCount = new HashMap<>();
+                            renterCount.put(renter, count);
+                            bookingsByRenterByCity.put(city, renterCount);
+                        }
+                    }
+                    return bookingsByRenterByCity;
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting number of bookings by date range and renter", e);
+        }
+    }
+
+    // Map<renter, number of cancelled bookings within a range>, ordered by number of cancelled bookings
+    public Map<User, Long> getNumberOfCancelledBookingsInDateRangePerRenter(LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery("SELECT users.*, COUNT(*) FROM cancelled_bookings " +
+                "JOIN users ON cancelled_bookings.tenant_sin = users.sin " +
+                "WHERE start_date >= ? AND end_date <= ? " +
+                "GROUP BY cancelled_bookings.tenant_sin " +
+                "ORDER by COUNT(*) DESC",
+                startDate, endDate);
+        try {
+            List<User> users = executeUserQuery(query);
+            Connection conn = threadLocalConnection.get();
+            try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                for (int i = 0; i < query.parameters().length; i++) {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
+                try (ResultSet rs = stmt.executeQuery()) {
+                    // Use ordered map to preserve order of results
+                    Map<User, Long> bookingsByRenter = new LinkedHashMap<>();
+                    int counter = 0;
+                    while (rs.next() && counter < users.size()) {
+                        bookingsByRenter.put(users.get(counter++), rs.getLong("COUNT(*)"));
+                    }
+                    return bookingsByRenter;
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting number of cancelled bookings by date range and renter", e);
+        }
+    }
+
+    public Map<User, Long> getNumberOfCancelledBookingsInDateRangePerHost(LocalDate startDate, LocalDate endDate) {
+        SqlQuery query = new SqlQuery("SELECT users.*, COUNT(*) FROM cancelled_bookings " +
+                "JOIN listings ON cancelled_bookings.listings_listing_id = listings.listing_id " +
+                "JOIN users ON listings.users_sin = users.sin " +
+                "WHERE start_date >= ? AND end_date <= ? " +
+                "GROUP BY listings.users_sin " +
+                "ORDER by COUNT(*) DESC",
+                startDate, endDate);
+        try {
+            List<User> users = executeUserQuery(query);
+            Connection conn = threadLocalConnection.get();
+            try (PreparedStatement stmt = conn.prepareStatement(query.sql())) {
+                for (int i = 0; i < query.parameters().length; i++) {
+                    stmt.setObject(i + 1, query.parameters()[i]);
+                }
+                try (ResultSet rs = stmt.executeQuery()) {
+                    // Use ordered map to preserve order of results
+                    Map<User, Long> bookingsByHost = new LinkedHashMap<>();
+                    int counter = 0;
+                    while (rs.next() && counter < users.size()) {
+                        bookingsByHost.put(users.get(counter++), rs.getLong("COUNT(*)"));
+                    }
+                    return bookingsByHost;
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error getting number of cancelled bookings by date range and host", e);
         }
     }
 
