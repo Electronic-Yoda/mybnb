@@ -15,6 +15,15 @@ Two applications are included to demonstrate the functionality of the system.
 The first is a ServiceCli, which allows users to create user accounts, listings, make bookings, and add reviews. A notable capability of this application is its ability to search for listings based on various filters, such as price, location, and amenities.
 The second application is ManagementCli, which allows administrators to load test data, reset the database, and run reports. It also allows administrators to view reports on the system, such as the most popular listings and the most active users.
 
+# Assumptions
+Users are unique based on their SIN number.
+Listings are unique based on the combination of their address, postal code, and city.
+Users must check-in by 11AM and check-out by 3PM thus the minimum booking range is at least two days.
+Users cannot book their own listings.
+Only tenants can review their booked listings and related hosts.
+Only hosts can review tenants.
+Reviews can only be created after the end date of the booking.
+
 # ServiceCli Commands
 ## Login
 
