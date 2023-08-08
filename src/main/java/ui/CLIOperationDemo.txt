@@ -1,0 +1,81 @@
+// Operations 1: create user 1 as host
+
+create user -s 1 -n Donald_Doe -a 32_Main_St._Toronto,_ON -b 2001-03-12 -o Student
+
+// let user with id 1 create two listings
+login user -s 1
+create listing -t house -a 123_Main_St. -pc M5S_1A1 -lo 43.66 -la 79.40 -ci Toronto -co Canada
+// then add tv, hot tub, and wifi to the first listing
+create listing -t apartment -a 111_Main_St. -pc M5T_1C1 -lo 42.11 -la 79.40 -ci Toronto -co Canada
+// then add wifi only
+
+
+// TODO: update listing ID because it will be different
+show mylistings
+show amenities -l 53
+show amenities -l 54
+
+add availability -l 53 -sd 2023-09-10 -ed 2023-09-20 -ppn 100
+add availability -l 53 -sd 2023-10-10 -ed 2023-10-20 -ppn unsure
+
+add availability -l 54 -sd 2023-09-10 -ed 2023-09-20 -ppn unsure
+
+show availabilities -l 53
+show availabilities -l 54
+
+delete listing -l 54
+
+show mylistings
+
+
+// Operations 2: create user 2 as tenant
+create user -s 2 -n John_Doe -a  -b 1976-01-09 -o Doctor
+
+show amenities -l 53
+show availabilities -l 53
+
+create booking -l 53 -sd 2023-09-10 -ed 2023-09-19 -pm visa -cn 3115135341
+
+show mybookings
+
+
+// Operations 3: login to user 6
+login user -s 6
+
+show mylistings
+
+show mybookings
+
+// Choose a booking that ended and create a review as a host/tenant
+add review -b <booking id>
+
+show mybookings // Search for newly added review
+
+
+// Search by location (there is a 20 km default radius)
+show listings -lo -79.39 -la 43.66
+
+// Search by location (with radius)
+show listings -lo -79.39 -la 43.66 -rad 10
+
+// Search by address (exact and with radius)
+show listings -a 100_Queens_Park
+show listings -a 100_Queens_Park -rad 10
+show listings -a 100_Queens_Park -rad 100
+
+// Search by postal code (exact and with radius)
+show listings -pc 10011
+show listings -pc 10011 -rad 50
+
+// Search by listing type
+show listings -pc 10011 -rad 50 -t guesthouse
+show listings -pc 10011 -rad 50 -t guesthouse,apartment
+
+// Search by listing type and amenities
+show listings -pc 10011 -rad 50 -t guesthouse,apartment -amen wifi
+show listings -amen tv,dryer
+how listings -t hotel -amen tv,dryer
+
+show listings -pc 10011 -rad 50 -ppn value?
+
+show listings -ppnmax 100
