@@ -6,8 +6,9 @@ The system is developed according to the DAO (Data Access Object) pattern, which
 Java Records are used to represent the data at the service layer, which allows for the immutability of the data and the ease of testing.
 A builder design pattern and the dynamic generation of SQL queries in the DAO layer allows for flexible and extensible queries.
 
-Key technologies and libraries used include Java, JUnit for testing, MySQL and JDBC for database operations, Docker for containerization,
+Key technologies and libraries used include JUnit for testing, MySQL and JDBC for database operations, Docker for containerization,
 Log4J for logging, MySQL spatial extensions for handling geographical data, Apache Commons CLI and JLine for the command line interface,
+OpenNLP for text processing,
 and Swing for the report UI.
 Additionally, to generate emulated data for testing, the Google Maps API is used to retrieve the coordinates of addresses, and the Faker library is used to generate realistic data.
 
