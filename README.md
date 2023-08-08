@@ -434,6 +434,18 @@ show mylistings
 // You can then add availabilities to the listings. You will need the listing id to do so.
 ```
 
+### Create User as tenant
+```
+create user -s 2 -n John_Doe -a  -b 1976-01-09 -o Doctor
+
+show amenities -l 53
+show availabilities -l 53
+
+create booking -l 53 -sd 2023-09-10 -ed 2023-09-19 -pm visa -cn 3115135341
+
+show mybookings
+```
+
 ### Search Listings
 Try to run the following commands in the order they are listed below. Note that the commands are case sensitive.
 ```agsl
