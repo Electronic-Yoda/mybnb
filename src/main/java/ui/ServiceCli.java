@@ -674,6 +674,9 @@ public class ServiceCli {
                 handleDeleteAmenity(args);
                 break;
             // TODO: Add other "delete" sub-commands handlers here, if needed
+            case "user":
+                handleDeleteUser(args);
+                break;
             default:
                 System.out.println("Unknown sub-command for 'delete': " + subCommand);
                 break;
@@ -761,6 +764,35 @@ public class ServiceCli {
         } catch (org.apache.commons.cli.ParseException e) {
             System.out.println(e.getMessage());
 
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        }
+    }
+
+    private void handleDeleteUser(String[] args) {
+        if (!checkUserLoggedIn())
+            return;
+
+        try {
+            Options options = new Options();
+            options.addOption(Option.builder("s").longOpt("user-sin").hasArg().required().desc("user sin").build());
+
+            CommandLineParser parser = new DefaultParser();
+            CommandLine cmd = parser.parse(options, args);
+
+            String userSin = cmd.getOptionValue("s");
+
+            // delete user
+            userService.deleteUser(Long.parseLong(userSin));
+            System.out.println("Deleted user with sin: " + userSin);
+        } catch (ServiceException e) {
+            System.out.println(e.getMessage());
+            if (e.getCause() != null) {
+                System.out.println(e.getCause().getMessage());
+            }
+        } catch (org.apache.commons.cli.ParseException e) {
+            System.out.println(e.getMessage());
             if (e.getCause() != null) {
                 System.out.println(e.getCause().getMessage());
             }

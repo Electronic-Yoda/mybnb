@@ -18,7 +18,7 @@ The second application is ManagementCli, which allows administrators to load tes
 
 # Assumptions
 * Users are unique based on their SIN number.
-* Listings are unique based on the combination of their address, postal code, and city.
+* Listings are unique based listing_id or the combination of their address, postal code, and city.
 * Users must check-in by 11AM and check-out by 3PM thus the minimum booking range is at least two days inclusive.
 * Users cannot book their own listings.
 * Only tenants can review their booked listings and related hosts.

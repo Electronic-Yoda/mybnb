@@ -1,5 +1,7 @@
 package service;
 
+import domain.Booking;
+import domain.Listing;
 import domain.User;
 import data.Dao;
 import exception.ServiceException;
@@ -42,6 +44,22 @@ public class UserService {
                 throw new ServiceException(
                         String.format(
                                 "Unable to delete user because user with SIN %d does not exist", sin
+                        )
+                );
+            }
+            List<Listing> listings = dao.getListingsByHostSin(sin);
+            if (!listings.isEmpty()) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to delete user because user with SIN %d is a host of %d listings", sin, listings.size()
+                        )
+                );
+            }
+            List<Booking> bookings = dao.getTenenatBookings(sin);
+            if (!bookings.isEmpty()) {
+                throw new ServiceException(
+                        String.format(
+                                "Unable to delete user because user with SIN %d is a tenant of %d bookings", sin, bookings.size()
                         )
                 );
             }
