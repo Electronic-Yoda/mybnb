@@ -1,4 +1,4 @@
-package tool;
+package ui;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;

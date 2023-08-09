@@ -20,7 +20,6 @@ import service.ListingService;
 import service.ReportService;
 import service.UserService;
 import tool.Emulator;
-import tool.ReportWindow;
 
 import java.awt.*;
 import java.time.LocalDate;
